@@ -1,0 +1,33 @@
+services:
+  api-server:
+    build: .
+    container_name: smtp-relay-api
+    ports:
+      - "5001:5001"  # API server
+    volumes:
+      - ./sender.json:/app/sender.json  # Persist sender configuration
+    environment:
+      - FLASK_ENV=production
+    command: ["python3", "api_server.py"]
+    networks:
+      - smtp-network
+    restart: unless-stopped
+
+  web-ui:
+    build: .
+    depends_on:
+      - api-server
+    container_name: smtp-relay-web
+    ports:
+      - "5000:5000"  # Web UI
+    environment:
+      - API_BASE_URL=http://api-server:5001
+      - FLASK_ENV=production
+    command: web  # This tells the entrypoint script to run web UI
+    networks:
+      - smtp-network
+    restart: unless-stopped
+
+networks:
+  smtp-network:
+    driver: bridge
