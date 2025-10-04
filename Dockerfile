@@ -1,14 +1,13 @@
 FROM debian:12-slim
 
-# Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install postfix and other required packages including procps for ps command
+# Install necessary packages
 RUN apt-get update && \
     apt-get install -y postfix mailutils python3 python3-pip sudo python3-venv curl procps && \
     rm -rf /var/lib/apt/lists/*
 
-# Configure postfix for internet usage as a satellite system
+# Configure Postfix
 RUN echo "postfix postfix/mailname string localhost" | debconf-set-selections && \
     echo "postfix postfix/main_cf_content string " | debconf-set-selections && \
     dpkg-reconfigure -f noninteractive postfix
@@ -25,9 +24,9 @@ WORKDIR /app
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Install Python dependencies in the virtual environment
+# Install Python dependencies from requirements.txt
 RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir requests flask
+    pip3 install --no-cache-dir -r requirements.txt
 
 # Create necessary directories and set permissions
 RUN mkdir -p /etc/postfix /var/spool/postfix /var/lib/postfix /var/run/postfix && \
