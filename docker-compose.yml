@@ -1,33 +1,12 @@
 services:
-  api-server:
+  app:
     build: .
-    container_name: smtp-relay-api
+    container_name: smtp-relay-app
+    # Gunakan port 8000 untuk Uvicorn
     ports:
-      - "5001:5001"  # API server
+      - "8000:8000"
+      - "25:25"
     volumes:
-      - ./sender.json:/app/sender.json  # Persist sender configuration
-    environment:
-      - FLASK_ENV=production
-    command: ["python3", "api_server.py"]
-    networks:
-      - smtp-network
+      - ./sender.json:/app/sender.json
+      - ./sasl_config.json:/app/sasl_config.json
     restart: unless-stopped
-
-  web-ui:
-    build: .
-    depends_on:
-      - api-server
-    container_name: smtp-relay-web
-    ports:
-      - "5000:5000"  # Web UI
-    environment:
-      - API_BASE_URL=http://api-server:5001
-      - FLASK_ENV=production
-    command: web  # This tells the entrypoint script to run web UI
-    networks:
-      - smtp-network
-    restart: unless-stopped
-
-networks:
-  smtp-network:
-    driver: bridge
