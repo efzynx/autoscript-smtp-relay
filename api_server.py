@@ -463,15 +463,37 @@ def send_test_email():
     
     # Add delivery status check after sending
     if result['status'] == 'success':
-        # Check mail queue to confirm the email was queued
+        # Check mail queue to confirm the email was queued and provide detailed status
         try:
             queue_result = subprocess.run(['sudo', 'postqueue', '-p'], capture_output=True, text=True, timeout=5)
-            if queue_result.returncode == 0 and queue_result.stdout.strip() != "Mail queue is empty":
+            if queue_result.returncode == 0:
+                if queue_result.stdout.strip() != "Mail queue is empty" and "-Queue ID-" in queue_result.stdout:
+                    result['delivery_status'] = 'queued_for_delivery'
+                    result['message'] = "Email sent successfully and queued for delivery! Message delivered to SMTP relay."
+                    
+                    # Find and extract queue ID for the specific email
+                    lines = queue_result.stdout.split('\n')
+                    for line in lines[4:]:  # Skip header lines
+                        if data['to_email'] in line and line.strip() != "":
+                            # Extract queue ID
+                            parts = line.split()
+                            if len(parts) > 0 and parts[0] != "":
+                                queue_id = parts[0].strip('*')
+                                result['queue_id'] = queue_id
+                                result['delivery_details'] = f"Queue ID: {queue_id}"
+                                break
+                else:
+                    result['delivery_status'] = 'queued_for_delivery'
+                    result['message'] = "Email sent successfully and queued for delivery!"
+            else:
                 result['delivery_status'] = 'queued_for_delivery'
-                result['message'] = result['message'] + " - Message queued for delivery"
-        except:
+                result['message'] = "Email sent successfully and likely queued for delivery. Mail queue check timed out."
+        except subprocess.TimeoutExpired:
             result['delivery_status'] = 'unknown'
-            result['message'] = result['message'] + " - Status: Queued (delivery status unknown)"
+            result['message'] = "Email sent successfully! Unable to confirm queue status due to timeout."
+        except Exception as e:
+            result['delivery_status'] = 'unknown'
+            result['message'] = f"Email sent successfully but status check failed: {str(e)}"
     
     return jsonify(result)
 

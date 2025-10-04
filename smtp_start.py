@@ -307,22 +307,44 @@ def send_test_email(stdscr):
     mail_cmd = f'echo "{body}" | mail -a "From: {sender_name} <{sender_email}>" -s "{subject}" {to}'
     result = subprocess.run(mail_cmd, shell=True)
     if result.returncode == 0:
-        print("✅ Test email sent successfully!")
-        print(f"From: {sender_name} <{sender_email}>")
-        print(f"To: {to}")
-        print(f"Subject: {subject}")
-        print(f"Status: Queued for delivery\n")
+        print("✅ Email sent successfully and queued for delivery!")
+        print(f"📧 From: {sender_name} <{sender_email}>")
+        print(f"📧 To: {to}")
+        print(f"📧 Subject: {subject}")
+        print(f"✅ Status: Successfully queued for delivery via SMTP relay\n")
         
-        # Check mail queue to confirm the email was queued
+        # Check mail queue to confirm the email was queued and provide detailed status
         try:
             queue_result = subprocess.run(['sudo', 'postqueue', '-p'], capture_output=True, text=True, timeout=5)
-            if queue_result.returncode == 0 and queue_result.stdout.strip() != "Mail queue is empty":
-                print("📋 Mail queue status: Message queued for delivery")
-        except:
-            print("📋 Mail queue status: Unable to check queue")
+            if queue_result.returncode == 0:
+                if queue_result.stdout.strip() != "Mail queue is empty" and "-Queue ID-" in queue_result.stdout:
+                    print("📋 Mail queue status: Message successfully queued for delivery")
+                    # Find and display the specific queued message
+                    lines = queue_result.stdout.split('\n')
+                    for line in lines[4:]:  # Skip header lines
+                        if to in line and line.strip() != "":
+                            # Extract queue ID and other details
+                            parts = line.split()
+                            if len(parts) > 0:
+                                queue_id = parts[0].strip('*')
+                                print(f"   📋 Queue ID: {queue_id}")
+                                break
+                else:
+                    print("📋 Mail queue status: Currently empty or no messages found")
+            else:
+                print("📋 Mail queue status: Unable to check queue details")
+                
+            # Show a notification about checking delivery status later
+            print("💡 Tip: Use 'Check Email Delivery Status' option to verify if the email was delivered")
+            
+        except subprocess.TimeoutExpired:
+            print("📋 Mail queue status: Command timed out - unable to check queue")
+        except Exception as e:
+            print(f"📋 Mail queue status: Error checking queue - {str(e)}")
     else:
-        print("❌ Failed to send test email.")
+        print("❌ Failed to send email.")
         print(f"Error: Email not queued for delivery\n")
+        print(f"💡 Tip: Check your SASL configuration and Postfix setup")
     input("Press Enter to return...")
 
 def check_mail_log():

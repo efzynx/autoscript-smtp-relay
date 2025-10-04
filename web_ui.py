@@ -508,7 +508,11 @@ if __name__ == '__main__':
             })
             .then(response => response.json())
             .then(data => {
-                showMessage(data.message, data.status === 'success' ? 'success' : 'error');
+                let message = data.message;
+                if (data.delivery_details && data.queue_id) {
+                    message += ` Queue ID: ${data.queue_id}`;
+                }
+                showMessage(message, data.status === 'success' ? 'success' : 'error');
                 if (data.status === 'success') {
                     document.getElementById('test-email-form').reset();
                 }
