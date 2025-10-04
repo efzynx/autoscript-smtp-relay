@@ -41,6 +41,7 @@ config.json
 
 # Ignore todolist.md as requested
 todolist.md
+todo.md
 
 # Sender data (contains sensitive information)
 sender.json
