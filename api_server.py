@@ -1,22 +1,17 @@
 #!/usr/bin/env python3
-"""
-SMTP Relay API Server - Provides API endpoints for SMTP relay functionality
-Allows the Web UI to communicate with the same backend that powers the CLI
-"""
 import json
 import subprocess
 import os
 import base64
 from flask import Flask, request, jsonify, abort
-from flask_cors import CORS  # <-- 1. IMPORT KEMBALI
+from flask_cors import CORS
 from datetime import datetime
 import logging
 
-# --- Setup basic logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
-CORS(app)  # <-- 2. AKTIFKAN CORS UNTUK SEMUA ROUTE
+CORS(app)
 
 # --- Use Absolute Paths to avoid ambiguity ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +21,6 @@ SASL_CONFIG_FILE = os.path.join(BASE_DIR, "sasl_config.json")
 API_PORT = int(os.environ.get('API_PORT', 5001))
 
 class SMTPRelayAPI:
-    # ... sisa kode tidak perlu diubah ...
     """API class that provides the same functionality as the CLI"""
     
     @staticmethod
@@ -161,8 +155,6 @@ class SMTPRelayAPI:
             result = subprocess.run(['sudo', 'tail', '-n', '30', log_file], 
                                   capture_output=True, text=True)
         elif option == "follow":
-            # For follow mode, we can't really follow in HTTP response
-            # So we'll just return the last 100 lines
             result = subprocess.run(['sudo', 'tail', '-n', '100', log_file], 
                                   capture_output=True, text=True)
         elif option == "parse_status":
