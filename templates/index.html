@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,18 +80,19 @@
                     <div class="card-header"><i class="bi bi-shield-lock"></i> Konfigurasi SASL (SMTP Relay)</div>
                     <div class="card-body">
                         <form id="sasl-form">
-                            <div class="form-group">
+                            <div class="form-group mb-3">
                                 <label for="relay_host" class="form-label">Relay Host</label>
                                 <input type="text" class="form-control" id="relay_host" placeholder="smtp.example.com:587" required>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group mb-3">
                                 <label for="username" class="form-label">Username</label>
                                 <input type="text" class="form-control" id="username" placeholder="user@example.com" required>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group mb-3">
                                 <label for="password" class="form-label">Password</label>
                                 <input type="password" class="form-control" id="password" required>
                             </div>
+                            <!-- PERBAIKAN 1: Menggunakan type="submit" -->
                             <button type="submit" class="btn btn-primary w-100">Simpan Konfigurasi SASL</button>
                         </form>
                     </div>
@@ -180,6 +180,7 @@
             
             document.getElementById('add-sender-btn').addEventListener('click', openAddModal);
             document.getElementById('save-new-sender').addEventListener('click', addSender);
+            // PERBAIKAN 2: Mendengarkan event 'submit' yang standar
             document.getElementById('sasl-form').addEventListener('submit', handleSaslForm);
             document.getElementById('test-email-form').addEventListener('submit', sendTestEmail);
             document.getElementById('flush-queue-btn').addEventListener('click', flushQueue);
@@ -196,10 +197,12 @@
             try {
                 const response = await fetch(API_BASE_URL + endpoint, options);
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'Network error or invalid JSON response' }));
-                    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ detail: 'Network error or invalid JSON response' }));
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
                 }
-                return await response.json();
+                // Jika tidak ada konten, kembalikan objek sukses kosong
+                const text = await response.text();
+                return text ? JSON.parse(text) : { status: 'success' };
             } catch (error) {
                 console.error('API Fetch Error:', error);
                 showMessage('API Error: ' + error.message, 'error');
@@ -208,53 +211,59 @@
         }
 
         async function loadStatus() {
-            const data = await apiFetch('/status');
-            document.getElementById('senders-count').textContent = data.senders_count;
-            document.getElementById('senders-badge').textContent = data.senders_count;
-            const postfixStatusEl = document.getElementById('status-postfix');
-            if (data.postfix_running) {
-                postfixStatusEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-            } else {
-                postfixStatusEl.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
-            }
+            try {
+                const data = await apiFetch('/status');
+                document.getElementById('senders-count').textContent = data.senders_count;
+                document.getElementById('senders-badge').textContent = data.senders_count;
+                const postfixStatusEl = document.getElementById('status-postfix');
+                if (data.postfix_running) {
+                    postfixStatusEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                } else {
+                    postfixStatusEl.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+                }
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         async function loadSenders() {
-            const senders = await apiFetch('/senders');
-            const select = document.getElementById('from_email');
-            select.innerHTML = '<option value="">Select sender</option>';
-            senders.forEach(sender => {
-                const option = document.createElement('option');
-                option.value = sender.email;
-                option.textContent = sender.name + ' <' + sender.email + '>';
-                select.appendChild(option);
-            });
+            try {
+                const senders = await apiFetch('/senders');
+                const select = document.getElementById('from_email');
+                select.innerHTML = '<option value="">Select sender</option>';
+                senders.forEach(sender => {
+                    const option = document.createElement('option');
+                    option.value = sender.email;
+                    option.textContent = sender.name + ' <' + sender.email + '>';
+                    select.appendChild(option);
+                });
 
-            const sendersList = document.getElementById('senders-list');
-            if (senders.length === 0) {
-                sendersList.innerHTML = '<div class="text-center p-4"><i class="bi bi-people fs-1 text-muted"></i><p class="text-muted mt-2">No senders configured yet</p></div>';
-                return;
-            }
-            let html = '<ul class="list-group list-group-flush">';
-            senders.forEach((sender, index) => {
-                html += '<li class="list-group-item d-flex justify-content-between align-items-center">' +
-                    '<div><strong>' + sender.name + '</strong><br><small class="text-muted">' + sender.email + '</small></div>' +
-                    '<div>' +
-                    '<button class="btn btn-sm btn-outline-primary me-2" onclick="openEditModal(' + index + ', \'' + sender.name + '\', \'' + sender.email + '\')"><i class="bi bi-pencil"></i></button>' +
-                    '<button class="btn btn-sm btn-outline-danger" onclick="deleteSender(' + index + ')"><i class="bi bi-trash"></i></button>' +
-                    '</div>' +
-                    '</li>';
-            });
-            html += '</ul>';
-            sendersList.innerHTML = html;
+                const sendersList = document.getElementById('senders-list');
+                if (senders.length === 0) {
+                    sendersList.innerHTML = '<div class="text-center p-4"><i class="bi bi-people fs-1 text-muted"></i><p class="text-muted mt-2">No senders configured yet</p></div>';
+                    return;
+                }
+                let html = '<ul class="list-group list-group-flush">';
+                senders.forEach((sender, index) => {
+                    html += '<li class="list-group-item d-flex justify-content-between align-items-center">' +
+                        '<div><strong>' + sender.name + '</strong><br><small class="text-muted">' + sender.email + '</small></div>' +
+                        '<div>' +
+                        '<button class="btn btn-sm btn-outline-primary me-2" onclick="openEditModal(' + index + ', \'' + sender.name.replace(/'/g, "\\'") + '\', \'' + sender.email + '\')"><i class="bi bi-pencil"></i></button>' +
+                        '<button class="btn btn-sm btn-outline-danger" onclick="deleteSender(' + index + ')"><i class="bi bi-trash"></i></button>' +
+                        '</div>' +
+                        '</li>';
+                });
+                html += '</ul>';
+                sendersList.innerHTML = html;
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         async function loadQueue() {
-            const data = await apiFetch('/mail_queue');
-            document.getElementById('queue-info').textContent = data.queue || data.message;
-            const lines = data.queue ? data.queue.split('\n') : [];
-            const count = lines.filter(line => line.trim() && !line.includes('Mail queue is empty') && !line.includes('-Queue ID-')).length;
-            document.getElementById('queue-count').textContent = count;
+            try {
+                const data = await apiFetch('/mail_queue');
+                document.getElementById('queue-info').textContent = data.queue || data.message;
+                const lines = data.queue ? data.queue.split('\n') : [];
+                const count = lines.filter(line => line.trim() && !line.includes('Mail queue is empty') && !line.includes('-Queue ID-')).length;
+                document.getElementById('queue-count').textContent = count;
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         function openAddModal() {
@@ -263,58 +272,64 @@
         }
 
         async function addSender() {
-            const data = {
-                name: document.getElementById('add-sender-name').value,
-                email: document.getElementById('add-sender-email').value
-            };
-            if (!data.name || !data.email) {
-                showMessage('Name and Email are required.', 'error');
-                return;
-            }
-            await apiFetch('/senders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            showMessage('Sender added successfully!', 'success');
-            addSenderModal.hide();
-            loadAllData();
+            try {
+                const data = {
+                    name: document.getElementById('add-sender-name').value,
+                    email: document.getElementById('add-sender-email').value
+                };
+                if (!data.name || !data.email) {
+                    showMessage('Name and Email are required.', 'error');
+                    return;
+                }
+                await apiFetch('/senders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                showMessage('Sender added successfully!', 'success');
+                addSenderModal.hide();
+                loadAllData();
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
         
         async function sendTestEmail(e) {
             e.preventDefault();
-            const fromSelect = document.getElementById('from_email');
-            const data = {
-                from_email: fromSelect.value,
-                from_name: fromSelect.options[fromSelect.selectedIndex].text.split('<')[0].trim(),
-                to_email: document.getElementById('to_email').value,
-                subject: document.getElementById('subject').value,
-                body: document.getElementById('body').value
-            };
-            const result = await apiFetch('/send_test_email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            showMessage(result.message, result.status);
-            if (result.status === 'success') {
+            try {
+                const fromSelect = document.getElementById('from_email');
+                const data = {
+                    from_email: fromSelect.value,
+                    from_name: fromSelect.options[fromSelect.selectedIndex].text.split('<')[0].trim(),
+                    to_email: document.getElementById('to_email').value,
+                    subject: document.getElementById('subject').value,
+                    body: document.getElementById('body').value
+                };
+                await apiFetch('/send_test_email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                showMessage('Test email sent successfully!', 'success');
                 document.getElementById('test-email-form').reset();
-                loadQueue();
-            }
+                setTimeout(loadQueue, 1500); // Beri waktu Postfix
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         async function flushQueue() {
             if (!confirm('Are you sure you want to flush the mail queue?')) return;
-            const data = await apiFetch('/flush_queue', { method: 'POST' });
-            showMessage(data.message, data.status === 'success' ? 'info' : 'error');
-            loadAllData();
+            try {
+                const data = await apiFetch('/flush_queue', { method: 'POST' });
+                showMessage(data.message || 'Flush command sent!', data.status === 'success' ? 'info' : 'error');
+                setTimeout(loadAllData, 1500);
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         async function deleteSender(index) {
             if (!confirm('Are you sure you want to delete this sender?')) return;
-            await apiFetch('/senders/' + index, { method: 'DELETE' });
-            showMessage('Sender deleted successfully!', 'success');
-            loadAllData();
+            try {
+                await apiFetch('/senders/' + index, { method: 'DELETE' });
+                showMessage('Sender deleted successfully!', 'success');
+                loadAllData();
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         function openEditModal(id, name, email) {
@@ -325,19 +340,21 @@
         }
 
         async function saveSenderChanges() {
-            const id = document.getElementById('edit-sender-id').value;
-            const data = {
-                name: document.getElementById('edit-sender-name').value,
-                email: document.getElementById('edit-sender-email').value
-            };
-            await apiFetch('/senders/' + id, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            showMessage('Sender updated successfully!', 'success');
-            editSenderModal.hide();
-            loadAllData();
+            try {
+                const id = document.getElementById('edit-sender-id').value;
+                const data = {
+                    name: document.getElementById('edit-sender-name').value,
+                    email: document.getElementById('edit-sender-email').value
+                };
+                await apiFetch('/senders/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                showMessage('Sender updated successfully!', 'success');
+                editSenderModal.hide();
+                loadAllData();
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
         
         function showMessage(message, type) {
@@ -360,34 +377,25 @@
             }, 5000);
         }
 
-        // FUNGSI BARU UNTUK MENGHANDLE SUBMIT SASL
-        function handleSaslForm(e) {
+        async function handleSaslForm(e) {
             e.preventDefault();
-            const data = {
-                relay_host: document.getElementById('relay_host').value,
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value,
-            };
+            try {
+                const data = {
+                    relay_host: document.getElementById('relay_host').value,
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value,
+                };
 
-            fetch('/api/configure_sasl', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw new Error(err.detail) });
-                }
-                return response.json();
-            })
-            .then(data => {
-                showMessage(data.message, 'success');
+                const result = await apiFetch('/configure_sasl', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                showMessage(result.message || 'SASL configuration saved!', 'success');
                 document.getElementById('sasl-form').reset();
-            })
-            .catch(error => {
-                showMessage('Gagal menyimpan konfigurasi SASL: ' + error.message, 'error');
-            });
+            } catch (e) { /* Error sudah ditangani di apiFetch */ }
         }
     </script>
 </body>
 </html>
+

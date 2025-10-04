@@ -11,10 +11,14 @@ RUN apt-get update && \
 RUN echo "postfix postfix/mailname string localhost" | debconf-set-selections && \
     dpkg-reconfigure -f noninteractive postfix
 
+# Backup original postfix configuration
+RUN cp -a /etc/postfix /etc/postfix.bak
+
 WORKDIR /app
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-COPY . .
+COPY . /app
+WORKDIR /app
 
 RUN pip install --no-cache-dir -r requirements.txt
 

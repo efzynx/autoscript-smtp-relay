@@ -47,3 +47,5 @@ todo.md
 sender.json
 /etc/postfix/sasl_passwd
 /etc/postfix/sasl_passwd.db
+docker-compose.override.yml
+/postfix_config/

@@ -2,11 +2,12 @@ services:
   app:
     build: .
     container_name: smtp-relay-app
-    # Gunakan port 8000 untuk Uvicorn
     ports:
       - "8000:8000"
       - "25:25"
     volumes:
       - ./sender.json:/app/sender.json
       - ./sasl_config.json:/app/sasl_config.json
+      - ./postfix_config:/etc/postfix
     restart: unless-stopped
+
