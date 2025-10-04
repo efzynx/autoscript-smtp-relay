@@ -1,152 +1,123 @@
 # SMTP Relay Setup Tool
 
-A comprehensive tool for setting up and managing SMTP relays with Postfix. The tool provides both a Terminal UI (TUI) and a Web UI for managing your email relay configurations with an intuitive start menu for mode selection.
+Sebuah tool komprehensif untuk mengatur dan mengelola SMTP relay dengan Postfix, kini dibangun di atas arsitektur FastAPI yang modern dan berkinerja tinggi.
 
-## 🚀 Features
+  
 
-### Interface Options
-- **Start Menu**: Choose between Terminal UI or Web UI mode from a single entry point
-- **Terminal UI**: Interactive curses-based interface with menus and options
-- **Web UI**: Browser-based interface accessible at http://localhost:5000
+Aplikasi ini menyediakan dua antarmuka yang fleksibel—Web UI berbasis browser dan Terminal UI (TUI) yang kaya fitur—yang keduanya berinteraksi dengan server API inti yang sama, memastikan konsistensi dan kemudahan pengelolaan. Proyek ini dirancang untuk dapat dijalankan dengan mudah baik melalui Docker maupun secara lokal di terminal.
 
-### 🔧 Configuration & Management
-- **Automatic main.cf Configuration**: When setting up SASL, default configuration is immediately added to `/etc/postfix/main.cf`
-- **Multi-Account Support**: Manage multiple relay services (Brevo, Gmail, Mailgun) in one tool
-- **Sender Management**: Add, edit, delete, and switch between different sender accounts
-- **Password Encryption**: Passwords stored using Base64 encoding in `sender.json`
+  
 
-### 📊 Monitoring & Debugging
-- **Log Parsing**: Parse `mail.log` to display email status (delivered/deferred/bounced)
-- **Mail Queue Management**: View and flush queued emails with `postqueue -p` and `postqueue -f`
-- **Comprehensive Logging**: View last 30 lines or follow logs in real-time
+## 🏛️ Arsitektur Aplikasi
 
-### 🛠️ Administration
-- **Installation**: One-click Postfix installation with apt-get
-- **SASL Configuration**: Easy setup for SMTP authentication
-- **Test Email Functionality**: Send test emails to verify relay configuration
-- **Reset/Uninstall Options**: Complete removal or reset of configurations
+Aplikasi ini menggunakan model client-server yang sederhana namun kuat:
 
-### 🐳 Deployment
-- **Docker Support**: Containerized deployment with provided Dockerfile
-- **Docker Compose**: Simplified setup with single-command deployment
-- **Cross-Platform**: Portable across different environments
+ - **Server Inti (main.py):** Sebuah aplikasi FastAPI tunggal yang bertindak
+   sebagai otak. Server ini menangani semua logika backend, seperti
+   konfigurasi Postfix, manajemen sender, dan monitoring log, yang
+   semuanya diekspos melalui REST API.
+   
+ - **Klien:**
+	 - **Web UI**: Dasbor web modern yang intuitif, disajikan langsung oleh server FastAPI.
+	 - **Terminal UI (smtp_start.py):** Antarmuka berbasis teks yang lengkap (menggunakan curses) yang kini berfungsi sebagai klien, mengirimkan perintah ke Server Inti melalui panggilan HTTP.
 
-## 📋 Requirements
+  
 
-- Python 3.6+
-- Postfix
-- mailutils
-- sudo access for Postfix configuration
+## 🚀 Fitur Utama
 
-## 🛠️ Installation and Usage
+ - **Antarmuka Ganda, Satu Backend:** Kelola sistem Anda melalui Web UI
+   grafis atau CLI yang praktis, dengan semua perubahan terpusat di
+   server API.
+ - **Server Terpadu:** Tidak ada lagi server terpisah. Satu aplikasi FastAPI
+   menangani permintaan API dan menyajikan antarmuka web,
+   menyederhanakan deployment dan mengurangi kompleksitas.
+ - **Deployment Fleksibel:**
+	 - **Docker (Rekomendasi):** Jalankan seluruh aplikasi dalam satu kontainer terisolasi dengan satu perintah docker compose up.
+	 - **Lokal:** Jalankan server dan klien secara langsung di terminal Anda menggunakan Python untuk kemudahan development dan debugging.
+ - **Manajemen SASL Menyeluruh:** Konfigurasikan detail otentikasi SMTP
+   (relay host, username, password) dengan mudah baik melalui form di
+   Web UI maupun menu di CLI.
+ - **Manajemen Sender & Monitoring:** Tambah/edit/hapus sender, kirim email
+   uji coba, dan pantau antrean serta log email secara real-time dari
+   kedua antarmuka.
 
-### Quick Start
-```bash
-# Clone the repository
-git clone <repository-url>
-cd smtp-relay-setup
+  
 
-# Install dependencies
-pip install -r requirements.txt
+## 📋 Persyaratan
 
-# Run the start menu to choose your preferred interface
-python3 main_menu.py
-```
+**Untuk Menjalankan dengan Docker:**
+ - Docker
+ - Docker Compose
 
-### Terminal UI Mode
-```bash
-python3 main_menu.py
-# Then select "Run in Terminal UI Mode (TUI)"
-```
+**Untuk Menjalankan Lokal (Tanpa Docker):**
 
-### Web UI Mode
-```bash
-python3 main_menu.py
-# Then select "Run in Web UI Mode"
-# Visit http://localhost:5000 in your browser
-```
+ - Python 3.8+
+ - Postfix & Mailutils (sudah terinstal di sistem Anda)
+ - Akses `sudo` untuk konfigurasi Postfix
 
-## 🐳 Docker Deployment
+  
 
-### Prerequisites
-Make sure you have Docker and Docker Compose installed. If you encounter permission errors, you may need to add your user to the docker group:
-```bash
-sudo usermod -aG docker $USER
-# Log out and log back in for changes to take effect
-```
+## 🛠️ Instalasi dan Penggunaan
 
-### Using Docker Compose (Recommended)
-The application now uses a microservices architecture with separate containers for the API server and Web UI:
-```bash
-# Build and start the API server and Web UI
-docker compose up --build -d
+Pertama, kloning repositori ini:
 
-# The Web UI will be available at http://localhost:5000
-# The API server will be available at http://localhost:5001
-# SMTP relay will be available on port 25
-```
+    git clone https://github.com/efzynx/autoscript-smtp-relay.git
+    
+    cd autoscript-smtp-relay
 
-### Using Docker directly
-```bash
-# Build the Docker image
-docker build -t smtp-relay-setup .
+**Metode 1: Menjalankan dengan Docker (Direkomendasikan)**
 
-# Run in Web UI mode
-docker run -it -p 5000:5000 -p 5001:5001 -p 25:25 --name smtp-relay smtp-relay-setup web
+Ini adalah cara termudah dan terbersih untuk menjalankan aplikasi.
 
-# Run in Terminal UI mode
-docker run -it --name smtp-relay smtp-relay-setup tui
+**1. Jalankan Server:**
 
-# Run API server mode
-docker run -it -p 5001:5001 --name smtp-relay-api smtp-relay-setup api
-```
+Gunakan Docker Compose untuk membangun image dan menjalankan kontainer di latar belakang.
 
-### Architecture Overview
-The system now uses a hybrid architecture:
-- **API Server**: Handles all SMTP relay functionality and provides REST API endpoints
-- **Web UI**: Modern interface that communicates with the API server
-- **TUI**: Traditional terminal interface for direct interaction
-- **Shared Backend**: Both UIs use the same backend logic and data
+    sudo docker compose up --build -d
 
-### Troubleshooting Docker Issues
+**2. Akses Web UI:**
 
-#### Permission Issues
-If you encounter permission errors:
-- Add your user to the docker group: `sudo usermod -aG docker $USER`
-- Log out and log back in for changes to take effect
-- Or run with sudo: `sudo docker compose up --build -d`
+Buka browser Anda dan kunjungi:
 
-#### Postfix in Docker Containers
-When running Postfix in Docker containers, you may encounter issues with the service not starting properly. This is a known issue with Postfix in containerized environments. The containerized setup has been updated to handle this with:
+    http://localhost:8000
 
-1. Proper directory permissions for Postfix
-2. Direct execution of the Postfix master process
-3. Fallback checks using `ps` instead of `pgrep` for process verification
-4. Non-fatal warnings if Postfix doesn't start properly, allowing the UI to still function
+**3. Akses Terminal UI (CLI):**
 
-If the container still has issues starting Postfix:
-1. Make sure your container is running with necessary privileges
-2. The entrypoint script handles Postfix initialization
-3. If Postfix continues to have issues, consider running the application locally:
-   ```bash
-   python3 main_menu.py
-   ```
+Buka terminal baru dan jalankan perintah berikut untuk masuk ke mode CLI di dalam kontainer yang sedang berjalan:
 
-## 🔐 Security Notes
+    sudo docker compose exec app python3 smtp_start.py
 
-- Passwords are stored with Base64 encoding in sender.json
-- For production use, consider stronger encryption methods
-- Ensure Web UI access is secured when deployed publicly
-- The tool requires sudo access for Postfix configuration - ensure proper system security
+Menu CLI yang lengkap akan muncul di terminal Anda.
 
-## 🤝 Contributing
+**Metode 2: Menjalankan Lokal (Tanpa Docker)**
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+Gunakan metode ini untuk development atau jika Anda tidak ingin menggunakan Docker.
 
-## 📄 License
+**1. Instal Dependensi Python:**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+    sudo pip3 install -r requirements.txt
 
-## 🆘 Support
+**2. Jalankan Menu Utama:**
+Gunakan skrip main_menu.py untuk memilih mode yang ingin Anda jalankan.
 
-If you encounter any issues or have questions, please open an issue in the repository.
+    python3 main_menu.py
+
+Anda akan diberi pilihan:
+
+ - **Jalankan Server (Web UI & API):** Ini akan memulai server Uvicorn. Setelah itu, Anda bisa membuka Web UI di `http://localhost:8000`.
+ - **Jalankan Mode CLI (Terminal):** Ini akan menjalankan smtp_start.py. Pastikan server sudah berjalan di terminal lain agar CLI dapat
+   terhubung.
+
+  
+
+## 🔐 Catatan Keamanan
+
+ - Pastikan akses ke Web UI di port 8000 diamankan jika Anda
+   menjalankannya di server publik.
+ - Aplikasi ini memerlukan akses sudo untuk memodifikasi file
+   konfigurasi Postfix. Jalankan dengan hati-hati.
+
+## 🤝 Berkontribusi
+
+Kontribusi sangat kami harapkan! Silakan buat Pull Request. Untuk perubahan besar, mohon buka issue terlebih dahulu untuk berdiskusi.
+

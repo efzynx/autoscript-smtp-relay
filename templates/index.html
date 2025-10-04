@@ -76,6 +76,27 @@
                     </div>
                     <div class="card-body p-0" id="senders-list-container"><div id="senders-list"></div></div>
                 </div>
+                <!-- SASL card -->
+                <div class="card">
+                    <div class="card-header"><i class="bi bi-shield-lock"></i> Konfigurasi SASL (SMTP Relay)</div>
+                    <div class="card-body">
+                        <form id="sasl-form">
+                            <div class="form-group">
+                                <label for="relay_host" class="form-label">Relay Host</label>
+                                <input type="text" class="form-control" id="relay_host" placeholder="smtp.example.com:587" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" placeholder="user@example.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Simpan Konfigurasi SASL</button>
+                        </form>
+                    </div>
+                </div>
                 <!-- Mail Queue -->
                 <div class="card">
                     <div class="card-header"><i class="bi bi-inboxes"></i> Mail Queue</div>
@@ -159,6 +180,7 @@
             
             document.getElementById('add-sender-btn').addEventListener('click', openAddModal);
             document.getElementById('save-new-sender').addEventListener('click', addSender);
+            document.getElementById('sasl-form').addEventListener('submit', handleSaslForm);
             document.getElementById('test-email-form').addEventListener('submit', sendTestEmail);
             document.getElementById('flush-queue-btn').addEventListener('click', flushQueue);
             document.getElementById('save-sender-changes').addEventListener('click', saveSenderChanges);
@@ -336,6 +358,35 @@
                     bootstrap.Alert.getOrCreateInstance(alert).close();
                 }
             }, 5000);
+        }
+
+        // FUNGSI BARU UNTUK MENGHANDLE SUBMIT SASL
+        function handleSaslForm(e) {
+            e.preventDefault();
+            const data = {
+                relay_host: document.getElementById('relay_host').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+            };
+
+            fetch('/api/configure_sasl', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.detail) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                showMessage(data.message, 'success');
+                document.getElementById('sasl-form').reset();
+            })
+            .catch(error => {
+                showMessage('Gagal menyimpan konfigurasi SASL: ' + error.message, 'error');
+            });
         }
     </script>
 </body>
