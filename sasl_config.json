@@ -1,0 +1,15 @@
+{
+  "relay_hosts": [
+    {
+      "name": "smtp-relay.brevo.com:587",
+      "username": "93572f003@smtp-brevo.com",
+      "password": "eHNtdHBzaWItMTY3ZDNjNmY5YjgwY2E1NjNlNDI0YmQwZGQ5Mzk0NGI3MjIxZTUyN2IxYjU3YTE3MTI4NjYwYTA2MjYxMzA0MS1neUc0VEN6YkE4Y2Zobm01",
+      "default": true
+    },
+    {
+      "name": "smtp.gmail.com:587",
+      "username": "admin@gmail.com",
+      "password": "cGFzc3dvcmQxMjM="
+    }
+  ]
+}

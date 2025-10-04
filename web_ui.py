@@ -316,18 +316,6 @@ if __name__ == '__main__':
                                 <label for="sender_email" class="form-label">Email</label>
                                 <input type="email" class="form-control" id="sender_email" placeholder="sender@example.com" required>
                             </div>
-                            <div class="form-group">
-                                <label for="relay_host" class="form-label">Relay Host</label>
-                                <input type="text" class="form-control" id="relay_host" placeholder="e.g., smtp-relay.brevo.com:587">
-                            </div>
-                            <div class="form-group">
-                                <label for="username" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="username" placeholder="SMTP username">
-                            </div>
-                            <div class="form-group">
-                                <label for="password" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password" placeholder="SMTP password">
-                            </div>
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="bi bi-person-plus"></i> Add Sender
                             </button>
@@ -373,7 +361,6 @@ if __name__ == '__main__':
         <footer class="mt-5">
             <p>SMTP Relay Setup Tool &copy; 2025 | Secure Email Relay Configuration</p>
         </footer>
-    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -394,9 +381,9 @@ if __name__ == '__main__':
                     document.getElementById('senders-count').textContent = data.senders_count;
                     document.getElementById('senders-badge').textContent = data.senders_count;
                     if (data.postfix_running) {
-                        document.getElementById('status-postfix').innerHTML = '<i class=\"bi bi-check-circle-fill text-success\"></i>';
+                        document.getElementById('status-postfix').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
                     } else {
-                        document.getElementById('status-postfix').innerHTML = '<i class=\"bi bi-x-circle-fill text-danger\"></i>';
+                        document.getElementById('status-postfix').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
                         console.warn('Postfix is not running properly - some functions may be limited');
                     }
                     
@@ -425,7 +412,7 @@ if __name__ == '__main__':
                         });
                 })
                 .catch(error => {
-                    document.getElementById('status-postfix').innerHTML = '<i class=\"bi bi-x-circle-fill text-danger\"></i>';
+                    document.getElementById('status-postfix').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
                     console.error('Error:', error);
                     showMessage('Error loading status: ' + error, 'error');
                 });
@@ -436,7 +423,7 @@ if __name__ == '__main__':
                 .then(response => response.json())
                 .then(data => {
                     const select = document.getElementById('from_email');
-                    select.innerHTML = '<option value=\"\">Select sender</option>';
+                    select.innerHTML = '<option value="">Select sender</option>';
                     
                     data.forEach((sender, index) => {
                         const option = document.createElement('option');
@@ -448,23 +435,20 @@ if __name__ == '__main__':
                     // Also update senders list display
                     const sendersList = document.getElementById('senders-list');
                     if (data.length === 0) {
-                        sendersList.innerHTML = '<div class=\"text-center py-4\">' +
-                            '<i class=\"bi bi-people fs-1 text-muted\"></i>' +
-                            '<p class=\"text-muted\">No senders configured yet</p>' +
+                        sendersList.innerHTML = '<div class="text-center py-4">' +
+                            '<i class="bi bi-people fs-1 text-muted"></i>' +
+                            '<p class="text-muted">No senders configured yet</p>' +
                             '</div>';
                     } else {
-                        let html = '<div class=\"table-responsive\"><table class=\"table table-hover\">';
-                        html += '<thead><tr><th>Name</th><th>Email</th><th>Relay</th><th>Actions</th></tr></thead><tbody>';
+                        let html = '<div class="table-responsive"><table class="table table-hover">';
+                        html += '<thead><tr><th>Name</th><th>Email</th><th>Actions</th></tr></thead><tbody>';
                         data.forEach((sender, index) => {
-                            const relay = sender.relay_host || 'Not configured';
-                            const badgeClass = relay !== 'Not configured' ? 'success' : 'secondary';
                             html += '<tr>' +
                                 '<td>' + sender.name + '</td>' +
                                 '<td>' + sender.email + '</td>' +
-                                '<td><span class=\"badge bg-' + badgeClass + '\">' + relay + '</span></td>' +
                                 '<td>' +
-                                    '<button class=\"btn btn-sm btn-danger\" onclick=\"deleteSender(' + index + ')\">' +
-                                        '<i class=\"bi bi-trash\"></i> Delete' +
+                                    '<button class="btn btn-sm btn-danger" onclick="deleteSender(' + index + ')">' +
+                                        '<i class="bi bi-trash"></i> Delete' +
                                     '</button>' +
                                 '</td>' +
                             '</tr>';
@@ -524,7 +508,11 @@ if __name__ == '__main__':
             })
             .then(response => response.json())
             .then(data => {
-                showMessage(data.message, data.status === 'success' ? 'success' : 'error');
+                let message = data.message;
+                if (data.delivery_details && data.queue_id) {
+                    message += ` Queue ID: ${data.queue_id}`;
+                }
+                showMessage(message, data.status === 'success' ? 'success' : 'error');
                 if (data.status === 'success') {
                     document.getElementById('test-email-form').reset();
                 }
@@ -540,10 +528,7 @@ if __name__ == '__main__':
             
             const data = {
                 name: document.getElementById('sender_name').value,
-                email: document.getElementById('sender_email').value,
-                relay_host: document.getElementById('relay_host').value,
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value
+                email: document.getElementById('sender_email').value
             };
             
             fetch(API_BASE_URL + '/senders', {
@@ -637,9 +622,9 @@ if __name__ == '__main__':
                     bsClass = 'alert-secondary';
             }
             
-            messageDiv.innerHTML = '<div class=\"alert ' + bsClass + ' alert-dismissible fade show\" role=\"alert\">' +
+            messageDiv.innerHTML = '<div class="alert ' + bsClass + ' alert-dismissible fade show" role="alert">' +
                 message +
-                '<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\" aria-label=\"Close\"></button>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
             '</div>';
             
             // Auto-hide after 5 seconds

@@ -1,23 +1,18 @@
 [
   {
     "name": "Ahmad Fauzan",
-    "email": "me@efzyn.my.id",
-    "relay_host": "smtp-relay.brevo.com:587",
-    "username": "user@example.com",
-    "password": "cGFzc3dvcmQxMjM="
+    "email": "me@efzyn.my.id"
   },
   {
     "name": "Admin Efzyn",
-    "email": "admin@efzyn.my.id",
-    "relay_host": "smtp.gmail.com:587",
-    "username": "admin@gmail.com",
-    "password": "cGFzc3dvcmQxMjM="
+    "email": "admin@efzyn.my.id"
   },
   {
-    "name": "CS IBSPro",
-    "email": "cs@ibspro.biz.id",
-    "relay_host": "",
-    "username": "",
-    "password": ""
+    "name": "Customer Service",
+    "email": "cs@ibspro.biz.id"
+  },
+  {
+    "name": "fauzan",
+    "email": "fauzan@gmail.com"
   }
 ]

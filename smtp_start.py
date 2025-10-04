@@ -11,12 +11,28 @@ menu = [
     "Edit Sender (sender.json)",
     "Send Test Email",
     "Check Mail Log",
+    "Check Email Delivery Status",
     "Mail Queue",
     "Uninstall/Reset",
     "Exit"
 ]
 
 SENDER_FILE = "sender.json"
+SASL_CONFIG_FILE = "sasl_config.json"
+
+def load_sasl_config():
+    """Load SASL configuration from file"""
+    if not os.path.exists(SASL_CONFIG_FILE):
+        with open(SASL_CONFIG_FILE, "w") as f:
+            json.dump({"relay_hosts": []}, f)
+        return {"relay_hosts": []}
+    with open(SASL_CONFIG_FILE, "r") as f:
+        return json.load(f)
+
+def save_sasl_config(config):
+    """Save SASL configuration to file"""
+    with open(SASL_CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
 
 def draw_menu(stdscr, selected_row_idx, options, title="Menu"):
     stdscr.clear()
@@ -64,6 +80,33 @@ smtp_sasl_tls_security_options = noanonymous
     os.system("sudo systemctl restart postfix")
     print("SASL configured successfully with automatic main.cf configuration.")
     
+    # Add relay host to SASL config file
+    sasl_config = load_sasl_config()
+    new_relay = {
+        "name": relay_host,
+        "username": user,
+        "password": encrypt_password(passwd),  # Encrypt the password
+        "default": len(sasl_config["relay_hosts"]) == 0  # Set as default if it's the first relay
+    }
+    
+    # Check if relay already exists
+    existing_relay = None
+    for i, relay in enumerate(sasl_config["relay_hosts"]):
+        if relay["name"] == relay_host:
+            existing_relay = i
+            break
+    
+    if existing_relay is not None:
+        # Update existing relay
+        sasl_config["relay_hosts"][existing_relay] = new_relay
+        print("✅ Relay updated in SASL configuration.")
+    else:
+        # Add new relay
+        sasl_config["relay_hosts"].append(new_relay)
+        print("✅ Relay added to SASL configuration.")
+    
+    save_sasl_config(sasl_config)
+    
     # Ask if user wants to run an automatic test
     auto_test = input("Do you want to run an automatic test after configuration? (y/n): ").strip().lower()
     if auto_test == 'y' or auto_test == 'yes':
@@ -71,94 +114,32 @@ smtp_sasl_tls_security_options = noanonymous
         dummy_email = input("Enter a dummy email address to test relay (or press Enter to skip): ").strip()
         if dummy_email:
             send_test_email_to_address(dummy_email, f"Test subject - {relay_host} relay")
-    
-    # Save relay info in sender.json for this account
-    save_relay_info_to_sender(relay_host, user, passwd)
 
 
-def save_relay_info_to_sender(relay_host, username, password):
-    """Save relay information to the sender.json file"""
-    senders = load_senders()
-    
-    # If there are no senders yet, we can't add relay info to an existing sender
-    # So we can either create a new sender with relay info or just save the relay
-    # Let's create a new sender with relay info
-    if not senders:
-        print("\nNo existing senders found. Creating a new sender with relay info...")
-        sender_name = input("Enter sender name for this relay: ")
-        sender_email = input("Enter sender email for this relay: ")
-        relay_entry = {
-            "name": sender_name,
-            "email": sender_email,
-            "relay_host": relay_host,
-            "username": username,
-            "password": password
-        }
-        senders.append(relay_entry)
-        save_senders(senders)
-        print("✅ Relay information saved with sender details.")
-    else:
-        # If there are existing senders, allow user to pick one to add relay info to
-        print("\nExisting senders:")
-        for i, sender in enumerate(senders):
-            print(f"{i+1}. {sender['name']} <{sender['email']}>")
-        print(f"{len(senders)+1}. Create new sender with relay info")
-        
-        choice = input(f"Select sender to add relay info to (1-{len(senders)+1}): ").strip()
-        try:
-            choice_idx = int(choice) - 1
-            if 0 <= choice_idx < len(senders):
-                # Update existing sender
-                senders[choice_idx]["relay_host"] = relay_host
-                senders[choice_idx]["username"] = username
-                senders[choice_idx]["password"] = password
-                save_senders(senders)
-                print("✅ Relay information added to existing sender.")
-            elif choice_idx == len(senders):
-                # Create new sender
-                sender_name = input("Enter sender name for this relay: ")
-                sender_email = input("Enter sender email for this relay: ")
-                relay_entry = {
-                    "name": sender_name,
-                    "email": sender_email,
-                    "relay_host": relay_host,
-                    "username": username,
-                    "password": password
-                }
-                senders.append(relay_entry)
-                save_senders(senders)
-                print("✅ New sender with relay information created.")
-            else:
-                print("Invalid selection.")
-        except ValueError:
-            print("Invalid input. Relay info not saved.")
+
 
 def send_test_email_to_address(to_email, subject):
     """Send a test email to a specific address"""
     body = f"This is a test email sent via {to_email} SMTP relay to verify the configuration."
     
-    # Try to get a sender with relay info
+    # Get senders and a default sender
     senders = load_senders()
-    sender_with_relay = None
-    for s in senders:
-        if 'relay_host' in s:
-            sender_with_relay = s
-            break
+    if not senders:
+        print("❌ No senders configured. Please add a sender first.\n")
+        input("Press Enter to return...")
+        return
     
-    if sender_with_relay:
-        # Use the sender we found that has relay info
-        from_email = sender_with_relay['email']
-        from_name = sender_with_relay['name']
-        mail_cmd = f'echo "{body}" | mail -a "From: {from_name} <{from_email}>" -s "{subject}" {to_email}'
-    else:
-        # Use a default from address if no relay info is available
-        mail_cmd = f'echo "{body}" | mail -a "From: Test <test@yourdomain.com>" -s "{subject}" {to_email}'
+    # Use the first sender by default
+    default_sender = senders[0]
+    from_email = default_sender['email']
+    from_name = default_sender['name']
+    mail_cmd = f'echo "{body}" | mail -a "From: {from_name} <{from_email}>" -s "{subject}" {to_email}'
     
     result = subprocess.run(mail_cmd, shell=True)
     if result.returncode == 0:
-        print(f"✅ Test email sent to {to_email}.")
+        print(f"✅ Test email sent to {to_email}.\n")
     else:
-        print(f"❌ Failed to send test email to {to_email}.")
+        print(f"❌ Failed to send test email to {to_email}.\n")
     input("Press Enter to return...")
 
 def load_senders():
@@ -209,7 +190,7 @@ def decrypt_password(encrypted_password):
 
 def edit_sender_menu(stdscr):
     senders = load_senders()
-    options = ["Add Sender", "Edit Sender", "Delete Sender", "View Senders", "Add Relay Info", "Back"]
+    options = ["Add Sender", "Edit Sender", "Delete Sender", "View Senders", "Back"]
 
     current_row = 0
     while True:
@@ -223,7 +204,7 @@ def edit_sender_menu(stdscr):
         elif key == curses.KEY_DOWN and current_row < len(options) - 1:
             current_row += 1
         elif key in [curses.KEY_ENTER, 10, 13]:
-            if current_row == 5:  # Back
+            if current_row == 4:  # Back
                 return
 
             if current_row == 0:  # Add
@@ -272,8 +253,7 @@ def edit_sender_menu(stdscr):
                         stdscr.addstr(2, 2, "No senders available.")
                     else:
                         for i, s in enumerate(senders):
-                            relay_info = f" (relay: {s.get('relay_host', 'none')})" if 'relay_host' in s else " (no relay)"
-                            stdscr.addstr(i+2, 2, f"{i+1}. {s['name']} <{s['email']}> {relay_info}")
+                            stdscr.addstr(i+2, 2, f"{i+1}. {s['name']} <{s['email']}>")
                     stdscr.addstr(curses.LINES-2, 0, "Press any key to return...")
                     stdscr.refresh()
                     stdscr.getch()
@@ -284,29 +264,8 @@ def edit_sender_menu(stdscr):
                         print("No senders available.")
                     else:
                         for i, s in enumerate(senders):
-                            relay_info = f" (relay: {s.get('relay_host', 'none')})" if 'relay_host' in s else " (no relay)"
-                            print(f"{i+1}. {s['name']} <{s['email']}> {relay_info}")
+                            print(f"{i+1}. {s['name']} <{s['email']}>")
                     input("Press Enter to return...")
-
-            elif current_row == 4:  # Add Relay Info
-                curses.endwin()
-                if not senders:
-                    print("No senders found. Please add a sender first.")
-                else:
-                    for i, s in enumerate(senders):
-                        relay_info = f" (relay: {s.get('relay_host', 'none')})" if 'relay_host' in s else " (no relay)"
-                        print(f"{i+1}. {s['name']} <{s['email']}> {relay_info}")
-                    idx = int(input("Select sender to add/update relay info: ")) - 1
-                    if 0 <= idx < len(senders):
-                        relay_host = input("Enter relay host (e.g. smtp-relay.brevo.com:587): ")
-                        username = input("Enter SMTP username: ")
-                        password = input("Enter SMTP password: ")
-                        senders[idx]["relay_host"] = relay_host
-                        senders[idx]["username"] = username
-                        senders[idx]["password"] = password  # Note: In future, this should be encrypted
-                        save_senders(senders)
-                        print("✅ Relay information added/updated for sender.")
-                input("Press Enter to return...")
                     
             stdscr.clear()
             curses.doupdate()
@@ -319,8 +278,7 @@ def select_sender(stdscr):
 
     options = []
     for s in senders:
-        relay_info = f" (relay: {s.get('relay_host', 'none')})" if 'relay_host' in s else " (no relay)"
-        options.append(f"{s['name']} <{s['email']}> {relay_info}")
+        options.append(f"{s['name']} <{s['email']}>")
     
     current_row = 0
     while True:
@@ -349,9 +307,44 @@ def send_test_email(stdscr):
     mail_cmd = f'echo "{body}" | mail -a "From: {sender_name} <{sender_email}>" -s "{subject}" {to}'
     result = subprocess.run(mail_cmd, shell=True)
     if result.returncode == 0:
-        print("✅ Test email sent.\n")
+        print("✅ Email sent successfully and queued for delivery!")
+        print(f"📧 From: {sender_name} <{sender_email}>")
+        print(f"📧 To: {to}")
+        print(f"📧 Subject: {subject}")
+        print(f"✅ Status: Successfully queued for delivery via SMTP relay\n")
+        
+        # Check mail queue to confirm the email was queued and provide detailed status
+        try:
+            queue_result = subprocess.run(['sudo', 'postqueue', '-p'], capture_output=True, text=True, timeout=5)
+            if queue_result.returncode == 0:
+                if queue_result.stdout.strip() != "Mail queue is empty" and "-Queue ID-" in queue_result.stdout:
+                    print("📋 Mail queue status: Message successfully queued for delivery")
+                    # Find and display the specific queued message
+                    lines = queue_result.stdout.split('\n')
+                    for line in lines[4:]:  # Skip header lines
+                        if to in line and line.strip() != "":
+                            # Extract queue ID and other details
+                            parts = line.split()
+                            if len(parts) > 0:
+                                queue_id = parts[0].strip('*')
+                                print(f"   📋 Queue ID: {queue_id}")
+                                break
+                else:
+                    print("📋 Mail queue status: Currently empty or no messages found")
+            else:
+                print("📋 Mail queue status: Unable to check queue details")
+                
+            # Show a notification about checking delivery status later
+            print("💡 Tip: Use 'Check Email Delivery Status' option to verify if the email was delivered")
+            
+        except subprocess.TimeoutExpired:
+            print("📋 Mail queue status: Command timed out - unable to check queue")
+        except Exception as e:
+            print(f"📋 Mail queue status: Error checking queue - {str(e)}")
     else:
-        print("❌ Failed to send test email.\n")
+        print("❌ Failed to send email.")
+        print(f"Error: Email not queued for delivery\n")
+        print(f"💡 Tip: Check your SASL configuration and Postfix setup")
     input("Press Enter to return...")
 
 def check_mail_log():
@@ -721,14 +714,120 @@ def main(stdscr):
                 send_test_email(stdscr)
             elif current_row == 4:
                 check_mail_log()
-            elif current_row == 5:  # Mail Queue
+            elif current_row == 5:  # Check Email Delivery Status
+                curses.endwin()
+                check_email_delivery_status()
+            elif current_row == 6:  # Mail Queue
                 mail_queue_menu(stdscr)
-            elif current_row == 6:  # Uninstall/Reset
+            elif current_row == 7:  # Uninstall/Reset
                 uninstall_reset_menu(stdscr)
-            elif current_row == 7:  # Exit
+            elif current_row == 8:  # Exit
                 break
 
             stdscr.addstr(5, 0, "Press any key to return to menu...")
             stdscr.getch()
+
+# Add a function to check recent email delivery status
+def check_email_delivery_status():
+    """Check recent email delivery status from mail logs"""
+    print("\n🔍 Checking recent email delivery status...")
+    
+    log_paths = ["/var/log/mail.log", "/var/log/maillog"]
+    log_file = next((p for p in log_paths if os.path.exists(p)), None)
+
+    if not log_file:
+        print("❌ Mail log not found on this system.")
+        input("Press Enter to return...")
+        return
+
+    # Get the last 100 lines to find recent mail activity
+    result = subprocess.run(['sudo', 'tail', '-n', '100', log_file], capture_output=True, text=True)
+    
+    if result.returncode != 0:
+        print("❌ Failed to read log file.")
+        input("Press Enter to return...")
+        return
+    
+    log_content = result.stdout
+    statuses = []
+    
+    # Parse for different mail statuses in the log
+    lines = log_content.split('\n')
+    for line in lines:
+        if 'status=sent' in line or 'status=delivered' in line:
+            # Extract the message ID, sender, and recipient if possible
+            parts = line.split()
+            timestamp = ' '.join(parts[:3]) if len(parts) > 3 else 'Unknown'
+            # Look for message ID
+            msg_id = 'Unknown'
+            for part in parts:
+                if 'id=' in part or 'msgid=' in part:
+                    msg_id = part
+                    break
+            # Look for "to=" to find recipient
+            to_addr = 'Unknown'
+            for part in parts:
+                if 'to=' in part and 'orig_to=' not in part:  # Avoid orig_to which is original recipient
+                    to_addr = part.split('=')[1]
+                    break
+            # Look for "from=" to find sender
+            from_addr = 'Unknown'
+            for part in parts:
+                if 'from=' in part:
+                    from_addr = part.split('=')[1]
+                    break
+            statuses.append({"status": "delivered", "timestamp": timestamp, "from": from_addr, "to": to_addr, "message_id": msg_id})
+        elif 'status=deferred' in line:
+            parts = line.split()
+            timestamp = ' '.join(parts[:3]) if len(parts) > 3 else 'Unknown'
+            msg_id = 'Unknown'
+            for part in parts:
+                if 'id=' in part or 'msgid=' in part:
+                    msg_id = part
+                    break
+            to_addr = 'Unknown'
+            for part in parts:
+                if 'to=' in part and 'orig_to=' not in part:
+                    to_addr = part.split('=')[1]
+                    break
+            from_addr = 'Unknown'
+            for part in parts:
+                if 'from=' in part:
+                    from_addr = part.split('=')[1]
+                    break
+            statuses.append({"status": "deferred", "timestamp": timestamp, "from": from_addr, "to": to_addr, "message_id": msg_id})
+        elif 'status=bounced' in line or 'status=expired' in line or 'warning: delivery' in line or ' bounce ' in line or 'reject' in line:
+            parts = line.split()
+            timestamp = ' '.join(parts[:3]) if len(parts) > 3 else 'Unknown'
+            msg_id = 'Unknown'
+            for part in parts:
+                if 'id=' in part or 'msgid=' in part:
+                    msg_id = part
+                    break
+            to_addr = 'Unknown'
+            for part in parts:
+                if 'to=' in part and 'orig_to=' not in part:
+                    to_addr = part.split('=')[1]
+                    break
+            from_addr = 'Unknown'
+            for part in parts:
+                if 'from=' in part:
+                    from_addr = part.split('=')[1]
+                    break
+            statuses.append({"status": "failed", "timestamp": timestamp, "from": from_addr, "to": to_addr, "message_id": msg_id})
+
+    print(f"\n📊 Found {len(statuses)} email status entries:")
+    print("-" * 60)
+    
+    # Print the most recent statuses (reverse order to show newest first)
+    if statuses:
+        for status in reversed(statuses[-10:]):  # Show at most last 10 statuses
+            status_emoji = "✅" if status["status"] == "delivered" else "⏳" if status["status"] == "deferred" else "❌"
+            print(f"{status_emoji} {status['status'].upper()}: [{status['timestamp']}] {status['from']} → {status['to']} ({status['message_id']})")
+    else:
+        print("No email status entries found in recent logs.")
+    
+    print("-" * 60)
+    input("Press Enter to return...")
 
 curses.wrapper(main)

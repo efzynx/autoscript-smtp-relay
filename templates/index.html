@@ -258,18 +258,6 @@
                                 <label for="sender_email" class="form-label">Email</label>
                                 <input type="email" class="form-control" id="sender_email" placeholder="sender@example.com" required>
                             </div>
-                            <div class="form-group">
-                                <label for="relay_host" class="form-label">Relay Host</label>
-                                <input type="text" class="form-control" id="relay_host" placeholder="e.g., smtp-relay.brevo.com:587">
-                            </div>
-                            <div class="form-group">
-                                <label for="username" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="username" placeholder="SMTP username">
-                            </div>
-                            <div class="form-group">
-                                <label for="password" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password" placeholder="SMTP password">
-                            </div>
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="bi bi-person-plus"></i> Add Sender
                             </button>
@@ -315,7 +303,6 @@
         <footer class="mt-5">
             <p>SMTP Relay Setup Tool &copy; 2025 | Secure Email Relay Configuration</p>
         </footer>
-    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -335,7 +322,12 @@
                 .then(data => {
                     document.getElementById('senders-count').textContent = data.senders_count;
                     document.getElementById('senders-badge').textContent = data.senders_count;
-                    document.getElementById('status-postfix').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                    if (data.postfix_running) {
+                        document.getElementById('status-postfix').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                    } else {
+                        document.getElementById('status-postfix').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+                        console.warn('Postfix is not running properly - some functions may be limited');
+                    }
                     
                     // Get queue count
                     fetch(API_BASE_URL + '/mail_queue')
@@ -353,6 +345,7 @@
                                 document.getElementById('queue-count').textContent = count > 0 ? count : '0';
                             } else {
                                 document.getElementById('queue-count').textContent = '?';
+                                console.warn('Queue status:', queueData.message || 'Unknown error');
                             }
                         })
                         .catch(error => {
@@ -390,14 +383,11 @@
                             '</div>';
                     } else {
                         let html = '<div class="table-responsive"><table class="table table-hover">';
-                        html += '<thead><tr><th>Name</th><th>Email</th><th>Relay</th><th>Actions</th></tr></thead><tbody>';
+                        html += '<thead><tr><th>Name</th><th>Email</th><th>Actions</th></tr></thead><tbody>';
                         data.forEach((sender, index) => {
-                            const relay = sender.relay_host || 'Not configured';
-                            const badgeClass = relay !== 'Not configured' ? 'success' : 'secondary';
                             html += '<tr>' +
                                 '<td>' + sender.name + '</td>' +
                                 '<td>' + sender.email + '</td>' +
-                                '<td><span class="badge bg-' + badgeClass + '">' + relay + '</span></td>' +
                                 '<td>' +
                                     '<button class="btn btn-sm btn-danger" onclick="deleteSender(' + index + ')">' +
                                         '<i class="bi bi-trash"></i> Delete' +
@@ -426,11 +416,13 @@
                     if (data.status === 'success') {
                         document.getElementById('queue-info').textContent = data.queue;
                     } else {
-                        document.getElementById('queue-info').textContent = 'Error loading queue: ' + data.message;
+                        document.getElementById('queue-info').textContent = 'Error loading queue: ' + (data.message || 'Unknown error');
+                        console.warn('Queue error:', data.message);
                     }
                 })
                 .catch(error => {
                     document.getElementById('queue-info').textContent = 'Error loading queue: ' + error;
+                    console.error('Queue fetch error:', error);
                     showMessage('Error loading queue: ' + error, 'error');
                 });
         }
@@ -458,7 +450,11 @@
             })
             .then(response => response.json())
             .then(data => {
-                showMessage(data.message, data.status === 'success' ? 'success' : 'error');
+                let message = data.message;
+                if (data.delivery_details && data.queue_id) {
+                    message += ` Queue ID: ${data.queue_id}`;
+                }
+                showMessage(message, data.status === 'success' ? 'success' : 'error');
                 if (data.status === 'success') {
                     document.getElementById('test-email-form').reset();
                 }
@@ -474,10 +470,7 @@
             
             const data = {
                 name: document.getElementById('sender_name').value,
-                email: document.getElementById('sender_email').value,
-                relay_host: document.getElementById('relay_host').value,
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value
+                email: document.getElementById('sender_email').value
             };
             
             fetch(API_BASE_URL + '/senders', {
@@ -513,7 +506,11 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    showMessage(data.message, data.status === 'success' ? 'info' : 'error');
+                    if (data.status === 'success') {
+                        showMessage(data.message, 'info');
+                    } else {
+                        showMessage(data.message || 'Error flushing queue', 'error');
+                    }
                     loadQueue();
                     loadStatus(); // Refresh status after flush
                 })
