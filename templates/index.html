@@ -80,19 +80,24 @@
                     <div class="card-header"><i class="bi bi-shield-lock"></i> Konfigurasi SASL (SMTP Relay)</div>
                     <div class="card-body">
                         <form id="sasl-form">
-                            <div class="form-group mb-3">
-                                <label for="relay_host" class="form-label">Relay Host</label>
-                                <input type="text" class="form-control" id="relay_host" placeholder="smtp.example.com:587" required>
+                            <div class="row mb-3">
+                                <div class="col-8">
+                                    <label for="relay_host" class="form-label">Relay Host</label>
+                                    <input type="text" class="form-control" id="relay_host" placeholder="smtp.example.com" required>
+                                </div>
+                                <div class="col-4">
+                                    <label for="relay_port" class="form-label">Port</label>
+                                    <input type="number" class="form-control" id="relay_port" value="587" required>
+                                </div>
                             </div>
-                            <div class="form-group mb-3">
+                            <div class="mb-3">
                                 <label for="username" class="form-label">Username</label>
                                 <input type="text" class="form-control" id="username" placeholder="user@example.com" required>
                             </div>
-                            <div class="form-group mb-3">
+                            <div class="mb-3">
                                 <label for="password" class="form-label">Password</label>
                                 <input type="password" class="form-control" id="password" required>
                             </div>
-                            <!-- PERBAIKAN 1: Menggunakan type="submit" -->
                             <button type="submit" class="btn btn-primary w-100">Simpan Konfigurasi SASL</button>
                         </form>
                     </div>
@@ -180,7 +185,6 @@
             
             document.getElementById('add-sender-btn').addEventListener('click', openAddModal);
             document.getElementById('save-new-sender').addEventListener('click', addSender);
-            // PERBAIKAN 2: Mendengarkan event 'submit' yang standar
             document.getElementById('sasl-form').addEventListener('submit', handleSaslForm);
             document.getElementById('test-email-form').addEventListener('submit', sendTestEmail);
             document.getElementById('flush-queue-btn').addEventListener('click', flushQueue);
@@ -380,11 +384,17 @@
         async function handleSaslForm(e) {
             e.preventDefault();
             try {
+                // PERUBAHAN: Ambil nilai dari dua input
                 const data = {
                     relay_host: document.getElementById('relay_host').value,
+                    relay_port: parseInt(document.getElementById('relay_port').value, 10),
                     username: document.getElementById('username').value,
                     password: document.getElementById('password').value,
                 };
+                if (!data.relay_host || !data.relay_port || !data.username) {
+                    showMessage('All SASL fields are required.', 'error');
+                    return;
+                }
 
                 const result = await apiFetch('/configure_sasl', {
                     method: 'POST',
@@ -392,7 +402,7 @@
                     body: JSON.stringify(data)
                 });
                 showMessage(result.message || 'SASL configuration saved!', 'success');
-                document.getElementById('sasl-form').reset();
+                // Jangan reset form agar mudah diedit kembali
             } catch (e) { /* Error sudah ditangani di apiFetch */ }
         }
     </script>

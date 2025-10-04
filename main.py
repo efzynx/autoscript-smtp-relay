@@ -23,7 +23,12 @@ TEMPLATE_FILE = os.path.join(BASE_DIR, "templates", "index.html")
 # --- Model Data ---
 class Sender(BaseModel): name: str; email: str
 class TestEmail(BaseModel): from_email: str; from_name: str; to_email: str; subject: str; body: str
-class SaslConfig(BaseModel): relay_host: str; username: str; password: str
+# PERUBAHAN: Model SASL dengan host dan port terpisah
+class SaslConfig(BaseModel):
+    relay_host: str
+    relay_port: int
+    username: str
+    password: str
 
 # --- Fungsi Helper ---
 def load_senders():
@@ -87,17 +92,23 @@ def delete_sender(sender_id: int):
 def configure_sasl(config: SaslConfig):
     try:
         sasl_path = '/etc/postfix/sasl_passwd'
-        with open(sasl_path, 'w') as f: f.write(f"[{config.relay_host}] {config.username}:{config.password}\n")
+        
+        # PERUBAHAN: Gunakan host dan port terpisah untuk membuat string
+        sasl_entry = f"[{config.relay_host}]:{config.relay_port}"
+        formatted_relayhost = f"[{config.relay_host}]:{config.relay_port}"
+
+        with open(sasl_path, 'w') as f: f.write(f"{sasl_entry} {config.username}:{config.password}\n")
         run_command(['sudo', 'chmod', '600', sasl_path])
         
         postmap_result = run_command(['sudo', 'postmap', sasl_path])
         if postmap_result.returncode != 0: raise HTTPException(500, f"Gagal postmap: {postmap_result.stderr}")
 
-        run_command(['sudo', 'postconf', '-e', f'relayhost = [{config.relay_host}]'])
+        run_command(['sudo', 'postconf', '-e', f'relayhost = {formatted_relayhost}'])
         run_command(['sudo', 'postconf', '-e', 'smtp_use_tls = yes'])
         run_command(['sudo', 'postconf', '-e', 'smtp_sasl_auth_enable = yes'])
         run_command(['sudo', 'postconf', '-e', f'smtp_sasl_password_maps = hash:{sasl_path}'])
         run_command(['sudo', 'postconf', '-e', 'smtp_sasl_security_options = noanonymous'])
+        run_command(['sudo', 'postconf', '-e', 'inet_protocols = ipv4'])
 
         reload_result = run_command(['sudo', 'postfix', 'reload'])
         if reload_result.returncode != 0: raise HTTPException(500, f"Gagal reload Postfix: {reload_result.stderr}")
@@ -118,7 +129,6 @@ def get_mail_log(lines: int = 50):
 
 @app.get("/api/mail_queue", tags=["Monitoring"])
 def get_mail_queue():
-    """Melihat antrean email."""
     result = run_command(['sudo', 'postqueue', '-p'])
     if result:
         return {"status": "success", "queue": result.stdout or "Mail queue is empty"}
@@ -126,12 +136,10 @@ def get_mail_queue():
 
 @app.post("/api/flush_queue", tags=["Monitoring"])
 def flush_mail_queue():
-    """Membersihkan (flush) antrean email."""
     result = run_command(['sudo', 'postqueue', '-f'])
     if result and result.returncode == 0:
         return {"status": "success", "message": "Antrean email berhasil di-flush"}
     raise HTTPException(status_code=500, detail=f"Gagal melakukan flush: {result.stderr if result else ''}")
-# -----------------------------------------------
 
 @app.post("/api/send_test_email", tags=["Email"])
 def send_test_email(email: TestEmail):

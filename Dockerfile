@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y postfix mailutils python3 python3-pip sudo curl procps python3-venv && \
+    apt-get install -y postfix mailutils python3 python3-pip sudo curl procps rsyslog iputils-ping python3-venv && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure postfix

@@ -4,14 +4,19 @@ set -e # Hentikan skrip jika ada perintah yang gagal
 POSTFIX_CONFIG_DIR="/etc/postfix"
 POSTFIX_BACKUP_DIR="/etc/postfix.bak"
 
-# Jika volume konfigurasi kosong (menandakan kali pertama dijalankan),
-# isi dengan menyalin dari cadangan yang kita buat di Dockerfile.
+# Jika volume konfigurasi kosong, isi dengan menyalin dari cadangan.
 if [ ! -f "$POSTFIX_CONFIG_DIR/main.cf" ]; then
     echo "Volume konfigurasi Postfix kosong. Menyalin dari cadangan default..."
-    # Opsi -a akan menyalin semua file beserta izinnya
     cp -a $POSTFIX_BACKUP_DIR/* $POSTFIX_CONFIG_DIR/
     echo "Konfigurasi default berhasil disalin."
+    echo "Menonaktifkan chroot untuk SMTP untuk mengatasi masalah DNS..."
+    postconf -M -e smtp/inet="smtp inet n - n - - smtpd"
 fi
+
+# --- PERBAIKAN DI SINI: Jalankan daemon rsyslog secara langsung ---
+echo "Menjalankan daemon rsyslogd..."
+rsyslogd
+# -----------------------------------------------------------------
 
 # Jalankan newaliases untuk memastikan database alias ada dan terbaru
 echo "Memastikan database alias..."
