@@ -8,15 +8,25 @@ import subprocess
 import os
 import base64
 from flask import Flask, request, jsonify, abort
+from flask_cors import CORS  # <-- 1. IMPORT KEMBALI
 from datetime import datetime
+import logging
+
+# --- Setup basic logging ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
+CORS(app)  # <-- 2. AKTIFKAN CORS UNTUK SEMUA ROUTE
 
-SENDER_FILE = "sender.json"
-SASL_CONFIG_FILE = "sasl_config.json"
+# --- Use Absolute Paths to avoid ambiguity ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SENDER_FILE = os.path.join(BASE_DIR, "sender.json")
+SASL_CONFIG_FILE = os.path.join(BASE_DIR, "sasl_config.json")
+
 API_PORT = int(os.environ.get('API_PORT', 5001))
 
 class SMTPRelayAPI:
+    # ... sisa kode tidak perlu diubah ...
     """API class that provides the same functionality as the CLI"""
     
     @staticmethod
@@ -37,38 +47,37 @@ class SMTPRelayAPI:
     
     @staticmethod
     def load_senders():
-        """Load senders from JSON file with password decryption"""
+        """Load senders from JSON file"""
+        logging.info(f"Attempting to load senders from: {SENDER_FILE}")
         if not os.path.exists(SENDER_FILE):
+            logging.warning(f"'{SENDER_FILE}' not found. Creating a new empty file.")
             with open(SENDER_FILE, "w") as f:
                 json.dump([], f)
             return []
         
-        with open(SENDER_FILE, "r") as f:
-            senders = json.load(f)
-        
-        # Decrypt passwords after loading
-        decrypted_senders = []
-        for sender in senders:
-            decrypted_sender = sender.copy()
-            if 'password' in decrypted_sender:
-                decrypted_sender['password'] = SMTPRelayAPI.decrypt_password(decrypted_sender['password'])
-            decrypted_senders.append(decrypted_sender)
-        
-        return decrypted_senders
+        try:
+            with open(SENDER_FILE, "r") as f:
+                content = f.read()
+                if not content.strip():
+                    logging.warning(f"'{SENDER_FILE}' is empty. Returning empty list.")
+                    return []
+                data = json.loads(content)
+                logging.info(f"Successfully loaded {len(data)} senders.")
+                return data
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            logging.error(f"Error loading or parsing '{SENDER_FILE}': {e}. Returning empty list.")
+            return []
     
     @staticmethod
     def save_senders(senders):
-        """Save senders to JSON file with password encryption"""
-        # Encrypt passwords before saving
-        encrypted_senders = []
-        for sender in senders:
-            encrypted_sender = sender.copy()
-            if 'password' in encrypted_sender:
-                encrypted_sender['password'] = SMTPRelayAPI.encrypt_password(encrypted_sender['password'])
-            encrypted_senders.append(encrypted_sender)
-        
-        with open(SENDER_FILE, "w") as f:
-            json.dump(encrypted_senders, f, indent=2)
+        """Save senders to JSON file"""
+        logging.info(f"Attempting to save {len(senders)} senders to: {SENDER_FILE}")
+        try:
+            with open(SENDER_FILE, "w") as f:
+                json.dump(senders, f, indent=2)
+            logging.info("Successfully saved senders.")
+        except Exception as e:
+            logging.error(f"Failed to save senders to '{SENDER_FILE}': {e}")
     
     @staticmethod
     def encrypt_password(password):
@@ -421,10 +430,8 @@ def update_sender(sender_id):
     senders = SMTPRelayAPI.load_senders()
     
     if 0 <= sender_id < len(senders):
-        senders[sender_id] = {
-            'name': data['name'],
-            'email': data['email']
-        }
+        senders[sender_id]['name'] = data['name']
+        senders[sender_id]['email'] = data['email']
         SMTPRelayAPI.save_senders(senders)
         return jsonify({'status': 'success'})
     else:
@@ -547,5 +554,8 @@ def parse_log_status():
     return jsonify(result)
 
 if __name__ == '__main__':
-    print(f"Starting SMTP Relay API Server on port {API_PORT}")
+    logging.info(f"Starting SMTP Relay API Server on port {API_PORT}")
+    logging.info(f"Sender file path: {SENDER_FILE}")
+    logging.info(f"SASL config path: {SASL_CONFIG_FILE}")
     app.run(host='0.0.0.0', port=API_PORT, debug=False)
+
