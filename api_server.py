@@ -13,10 +13,27 @@ from datetime import datetime
 app = Flask(__name__)
 
 SENDER_FILE = "sender.json"
+SASL_CONFIG_FILE = "sasl_config.json"
 API_PORT = int(os.environ.get('API_PORT', 5001))
 
 class SMTPRelayAPI:
     """API class that provides the same functionality as the CLI"""
+    
+    @staticmethod
+    def load_sasl_config():
+        """Load SASL configuration from file"""
+        if not os.path.exists(SASL_CONFIG_FILE):
+            with open(SASL_CONFIG_FILE, "w") as f:
+                json.dump({"relay_hosts": []}, f)
+            return {"relay_hosts": []}
+        with open(SASL_CONFIG_FILE, "r") as f:
+            return json.load(f)
+    
+    @staticmethod
+    def save_sasl_config(config):
+        """Save SASL configuration to file"""
+        with open(SASL_CONFIG_FILE, "w") as f:
+            json.dump(config, f, indent=2)
     
     @staticmethod
     def load_senders():
@@ -389,10 +406,7 @@ def add_sender():
     
     new_sender = {
         'name': data['name'],
-        'email': data['email'],
-        'relay_host': data.get('relay_host'),
-        'username': data.get('username'),
-        'password': data.get('password')
+        'email': data['email']
     }
     
     senders.append(new_sender)
@@ -409,10 +423,7 @@ def update_sender(sender_id):
     if 0 <= sender_id < len(senders):
         senders[sender_id] = {
             'name': data['name'],
-            'email': data['email'],
-            'relay_host': data.get('relay_host'),
-            'username': data.get('username'),
-            'password': data.get('password')
+            'email': data['email']
         }
         SMTPRelayAPI.save_senders(senders)
         return jsonify({'status': 'success'})
@@ -449,6 +460,19 @@ def send_test_email():
         data['subject'], 
         data['body']
     )
+    
+    # Add delivery status check after sending
+    if result['status'] == 'success':
+        # Check mail queue to confirm the email was queued
+        try:
+            queue_result = subprocess.run(['sudo', 'postqueue', '-p'], capture_output=True, text=True, timeout=5)
+            if queue_result.returncode == 0 and queue_result.stdout.strip() != "Mail queue is empty":
+                result['delivery_status'] = 'queued_for_delivery'
+                result['message'] = result['message'] + " - Message queued for delivery"
+        except:
+            result['delivery_status'] = 'unknown'
+            result['message'] = result['message'] + " - Status: Queued (delivery status unknown)"
+    
     return jsonify(result)
 
 @app.route('/api/mail_queue', methods=['GET'])
