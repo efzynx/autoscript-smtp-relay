@@ -11,6 +11,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+# Import our new modules
+from installer import Installer
+from wizard import InstallationWizard
+
 # --- Setup logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -29,6 +33,20 @@ class SaslConfig(BaseModel):
     relay_port: int
     username: str
     password: str
+
+# Installation-related models
+class InstallationConfig(BaseModel):
+    relay_host: str
+    relay_port: int
+    username: str
+    password: str
+    provider: str = "custom"
+    
+class InstallationRequest(BaseModel):
+    config: InstallationConfig
+
+class UninstallRequest(BaseModel):
+    confirm: bool
 
 # --- Fungsi Helper ---
 def load_senders():
@@ -143,10 +161,80 @@ def flush_mail_queue():
 
 @app.post("/api/send_test_email", tags=["Email"])
 def send_test_email(email: TestEmail):
-    mail_cmd = f'echo "{email.body}" | mail -a "From: {email.from_name} <{email.from_email}>" -s "{email.subject}" {email.to_email}'
-    result = run_command(['bash', '-c', mail_cmd])
-    if result and result.returncode == 0: return {"status": "success"}
-    raise HTTPException(500, f"Gagal kirim email: {result.stderr if result else 'Unknown error'}")
+    # Use sendmail directly to properly set headers, avoiding the -a flag issue
+    # Create email content with proper headers and pipe to sendmail
+    email_content = f"""From: {email.from_name} <{email.from_email}>
+To: {email.to_email}
+Subject: {email.subject}
+
+{email.body}"""
+    
+    # Create a temporary file to store email content, then pipe it to sendmail
+    import tempfile
+    import os
+    
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+        temp_file.write(email_content)
+        temp_file_path = temp_file.name
+    
+    try:
+        # Use the run_command helper with a shell command to pipe from the temp file
+        result = run_command(['bash', '-c', f'cat "{temp_file_path}" | sendmail "{email.to_email}"'])
+        if result and result.returncode == 0: 
+            return {"status": "success"}
+        raise HTTPException(500, f"Gagal kirim email: {result.stderr if result else 'Unknown error'}")
+    finally:
+        # Clean up the temporary file
+        os.unlink(temp_file_path)
+
+# --- Installation Endpoints ---
+@app.get("/api/installation/status", tags=["Installation"])
+def get_installation_status():
+    """Get the current installation status."""
+    installer = Installer()
+    status = installer.get_installation_status()
+    return status
+
+@app.get("/api/installation/providers", tags=["Installation"])
+def get_installation_providers():
+    """Get available email provider presets."""
+    wizard = InstallationWizard()
+    providers = wizard.get_provider_presets()
+    return {"providers": providers}
+
+@app.post("/api/installation/start", tags=["Installation"])
+def start_installation(request: InstallationRequest):
+    """Start the SMTP relay installation process."""
+    try:
+        wizard = InstallationWizard()
+        result = wizard.install_with_data({
+            "relay_host": request.config.relay_host,
+            "relay_port": request.config.relay_port,
+            "username": request.config.username,
+            "password": request.config.password
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(500, f"Installation failed: {str(e)}")
+
+@app.post("/api/installation/uninstall", tags=["Installation"])
+def start_uninstallation(request: UninstallRequest):
+    """Start the SMTP relay uninstallation process."""
+    if not request.confirm:
+        raise HTTPException(400, "Uninstall confirmation required")
+    
+    try:
+        wizard = InstallationWizard()
+        result = wizard.uninstall()
+        return result
+    except Exception as e:
+        raise HTTPException(500, f"Uninstallation failed: {str(e)}")
+
+@app.get("/api/installation/system-info", tags=["Installation"])
+def get_system_info():
+    """Get system information for installation."""
+    wizard = InstallationWizard()
+    return wizard.get_system_info()
 
 # --- Endpoint UI ---
 @app.get("/", include_in_schema=False)

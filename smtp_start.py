@@ -86,6 +86,181 @@ def check_mail_log_cli():
         print(data['log'])
     input("\nTekan Enter untuk kembali...")
 
+def run_installation_wizard_cli():
+    """Menjalankan wizard instalasi SMTP relay."""
+    curses.endwin()
+    print("\n--- Installation Wizard ---")
+    
+    # Get system info
+    system_info = api_get("installation/system-info")
+    if system_info:
+        print(f"OS: {system_info.get('os_info', {}).get('name', 'Unknown')} {system_info.get('os_info', {}).get('version', '')}")
+        print(f"Package Manager: {system_info.get('package_manager', 'Unknown')}")
+        print(f"Sudo Access: {'Yes' if system_info.get('has_sudo', False) else 'No'}")
+    else:
+        print("❌ Could not get system information")
+        input("\nTekan Enter untuk kembali ke menu...")
+        return
+
+    # Get available providers
+    providers_data = api_get("installation/providers")
+    if not providers_data:
+        print("❌ Could not get provider information")
+        input("\nTekan Enter untuk kembali ke menu...")
+        return
+
+    providers = providers_data.get('providers', [])
+    print("\nAvailable providers:")
+    for i, provider in enumerate(providers):
+        print(f"  {i+1}. {provider['name']} - {provider['description']}")
+
+    # Choose provider
+    while True:
+        try:
+            choice = input(f"\nSelect provider (1-{len(providers)}): ").strip()
+            if choice.isdigit():
+                choice_idx = int(choice) - 1
+                if 0 <= choice_idx < len(providers):
+                    selected_provider = providers[choice_idx]
+                    break
+                else:
+                    print(f"Please enter a number between 1 and {len(providers)}")
+            else:
+                print("Please enter a number")
+        except (KeyboardInterrupt, EOFError):
+            print("\nOperasi dibatalkan.")
+            input("\nTekan Enter untuk kembali ke menu...")
+            return
+
+    print(f"\nSelected: {selected_provider['name']}")
+    
+    # Get credentials
+    if selected_provider['name'].lower() == 'gmail':
+        print("Note: For Gmail, use an App Password, not your regular password")
+        print("Learn more: https://support.google.com/accounts/answer/185833")
+
+    username = input("Enter your email/username: ").strip()
+    password = input("Enter your password/App Password: ").strip()
+    
+    # For custom provider, also get host and port
+    if selected_provider['name'].lower() == 'custom':
+        relay_host = input("Enter SMTP server host: ").strip()
+        while True:
+            relay_port_str = input("Enter SMTP server port (default 587): ").strip() or "587"
+            try:
+                relay_port = int(relay_port_str)
+                if 1 <= relay_port <= 65535:
+                    break
+                else:
+                    print("Port must be between 1 and 65535")
+            except ValueError:
+                print("Please enter a valid number")
+    else:
+        # Use default settings for known providers
+        if selected_provider['name'].lower() == 'gmail':
+            relay_host = "smtp.gmail.com"
+            relay_port = 587
+        elif selected_provider['name'].lower() == 'outlook':
+            relay_host = "smtp-mail.outlook.com"
+            relay_port = 587
+        elif selected_provider['name'].lower() == 'sendgrid':
+            relay_host = "smtp.sendgrid.net"
+            relay_port = 587
+        elif selected_provider['name'].lower() == 'aws ses':
+            relay_host = "email-smtp.us-east-1.amazonaws.com"  # Default region
+            relay_port = 587
+        else:
+            # Fallback to basic defaults
+            relay_host = "smtp.example.com"
+            relay_port = 587
+
+    # Confirm settings
+    print(f"\nSummary:")
+    print(f"  Provider: {selected_provider['name']}")
+    print(f"  Server: {relay_host}:{relay_port}")
+    print(f"  Username: {username}")
+    
+    confirm = input(f"\nProceed with installation? (y/N): ").strip().lower()
+    if confirm != 'y':
+        print("Installation canceled.")
+        input("\nTekan Enter untuk kembali ke menu...")
+        return
+
+    # Start installation
+    print("\nStarting installation...")
+    payload = {
+        "config": {
+            "relay_host": relay_host,
+            "relay_port": relay_port,
+            "username": username,
+            "password": password,
+            "provider": selected_provider['name'].lower().replace(' ', '_')
+        }
+    }
+    
+    result = api_post("installation/start", payload)
+    if result and result.get('success'):
+        print(f"\n✅ {result.get('message', 'Installation completed successfully!')}")
+    else:
+        error_msg = result.get('message', 'Installation failed') if result else 'Installation failed'
+        print(f"\n❌ {error_msg}")
+
+    input("\nTekan Enter untuk kembali ke menu...")
+
+def run_uninstallation_cli():
+    """Menjalankan proses uninstallasi."""
+    curses.endwin()
+    print("\n--- Uninstall SMTP Relay ---")
+    print("This will remove SMTP relay configuration and restore system to original state.")
+    
+    confirm = input("Are you sure you want to uninstall? This cannot be undone. (type 'YES' to confirm): ").strip()
+    if confirm != 'YES':
+        print("Uninstall canceled.")
+        input("\nTekan Enter untuk kembali ke menu...")
+        return
+
+    payload = {"confirm": True}
+    result = api_post("installation/uninstall", payload)
+    if result and result.get('success'):
+        print(f"\n✅ {result.get('message', 'Uninstallation completed successfully!')}")
+    else:
+        error_msg = result.get('message', 'Uninstallation failed') if result else 'Uninstallation failed'
+        print(f"\n❌ {error_msg}")
+
+    input("\nTekan Enter untuk kembali ke menu...")
+
+def check_installation_status_cli():
+    """Memeriksa status instalasi SMTP relay."""
+    curses.endwin()
+    print("\n--- Installation Status ---")
+    
+    result = api_get("installation/status")
+    if result:
+        # Display system info
+        os_info = result.get('system_info', {}).get('os_info', {})
+        print(f"OS: {os_info.get('name', 'Unknown')} {os_info.get('version', '')}")
+        print(f"Package Manager: {result.get('system_info', {}).get('package_manager', 'Unknown')}")
+        print(f"Sudo Access: {'Yes' if result.get('system_info', {}).get('has_sudo', False) else 'No'}")
+        
+        # Display Postfix status
+        postfix_status = result.get('system_info', {}).get('postfix_status', {})
+        print(f"\nPostfix Status:")
+        print(f"  Installed: {'Yes' if postfix_status.get('installed', False) else 'No'}")
+        print(f"  Running: {'Yes' if postfix_status.get('running', False) else 'No'}")
+        print(f"  Enabled: {'Yes' if postfix_status.get('enabled', False) else 'No'}")
+        
+        # Display verification results
+        verification = result.get('verification_results', {})
+        print(f"\nVerification Results:")
+        print(f"  Postfix Running: {'Yes' if verification.get('postfix_running', False) else 'No'}")
+        print(f"  Postfix Config Valid: {'Yes' if verification.get('config_valid', False) else 'No'}")
+        print(f"  SASL Configured: {'Yes' if verification.get('sasl_configured', False) else 'No'}")
+        print(f"  All Checks Passed: {'Yes' if verification.get('all_checks_passed', False) else 'No'}")
+    else:
+        print("❌ Could not get installation status")
+    
+    input("\nTekan Enter untuk kembali ke menu...")
+
 # --- Main Function ---
 def main(stdscr):
     curses.curs_set(0)
@@ -98,7 +273,15 @@ def main(stdscr):
         stdscr.getch()
         return
 
-    menu = ["Configure SASL", "Edit Sender", "Check Mail Log", "Exit"]
+    menu = [
+        "Configure SASL", 
+        "Edit Sender", 
+        "Check Mail Log", 
+        "Install SMTP Relay",
+        "Uninstall SMTP Relay",
+        "Check Installation Status",
+        "Exit"
+    ]
     current_row = 0
     while True:
         draw_menu(stdscr, current_row, menu, "SMTP Relay CLI")
@@ -109,7 +292,10 @@ def main(stdscr):
             if current_row == 0: configure_sasl_cli()
             elif current_row == 1: edit_sender_menu(stdscr) # Anda bisa melengkapi logika edit/delete di sini
             elif current_row == 2: check_mail_log_cli()
-            elif current_row == 3: break
+            elif current_row == 3: run_installation_wizard_cli()
+            elif current_row == 4: run_uninstallation_cli()
+            elif current_row == 5: check_installation_status_cli()
+            elif current_row == 6: break
 
 if __name__ == "__main__":
     curses.wrapper(main)
