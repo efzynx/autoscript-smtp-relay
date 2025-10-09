@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,6 +75,54 @@
                     </div>
                     <div class="card-body p-0" id="senders-list-container"><div id="senders-list"></div></div>
                 </div>
+                <!-- SASL card -->
+                <div class="card">
+                    <div class="card-header"><i class="bi bi-shield-lock"></i> Konfigurasi SASL (SMTP Relay)</div>
+                    <div class="card-body">
+                        <form id="sasl-form">
+                            <div class="row mb-3">
+                                <div class="col-8">
+                                    <label for="relay_host" class="form-label">Relay Host</label>
+                                    <input type="text" class="form-control" id="relay_host" placeholder="smtp.example.com" required>
+                                </div>
+                                <div class="col-4">
+                                    <label for="relay_port" class="form-label">Port</label>
+                                    <input type="number" class="form-control" id="relay_port" value="587" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" placeholder="user@example.com" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Simpan Konfigurasi SASL</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Installation Card -->
+                <div class="card">
+                    <div class="card-header"><i class="bi bi-tools"></i> Installation & Management</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <button id="installWizardBtn" class="btn btn-success w-100"><i class="bi bi-hammer"></i> Install SMTP Relay</button>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <button id="uninstallBtn" class="btn btn-danger w-100"><i class="bi bi-trash"></i> Uninstall SMTP Relay</button>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <h6>Installation Status</h6>
+                            <div id="installationStatus" class="alert alert-secondary">
+                                <i class="bi bi-info-circle"></i> Checking installation status...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Mail Queue -->
                 <div class="card">
                     <div class="card-header"><i class="bi bi-inboxes"></i> Mail Queue</div>
@@ -145,9 +192,140 @@
       </div>
     </div>
 
+    <!-- Installation Wizard Modal -->
+    <div class="modal fade" id="installWizardModal" tabindex="-1" aria-labelledby="installWizardModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="installWizardModalLabel"><i class="bi bi-hammer"></i> SMTP Relay Installation Wizard</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="installWizardSteps">
+              <!-- Step 1: System Info -->
+              <div id="installStep1" class="install-step">
+                <h5>Step 1: System Information</h5>
+                <div class="alert alert-info">
+                  <i class="bi bi-info-circle"></i> Checking your system compatibility...
+                </div>
+                <div id="systemInfoContent">
+                  <p>Loading system information...</p>
+                </div>
+                <div class="d-flex justify-content-end mt-3">
+                  <button id="nextToStep2" class="btn btn-primary">Next <i class="bi bi-arrow-right"></i></button>
+                </div>
+              </div>
+              
+              <!-- Step 2: Provider Selection -->
+              <div id="installStep2" class="install-step" style="display: none;">
+                <h5>Step 2: Select Email Provider</h5>
+                <div class="mb-3">
+                  <label class="form-label">Choose your email provider:</label>
+                  <select class="form-select" id="providerSelect">
+                    <option value="">Select a provider...</option>
+                  </select>
+                </div>
+                <div id="providerDescription" class="alert alert-secondary" style="display: none;"></div>
+                <div class="d-flex justify-content-between mt-3">
+                  <button id="prevToStep1" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Previous</button>
+                  <button id="nextToStep3" class="btn btn-primary">Next <i class="bi bi-arrow-right"></i></button>
+                </div>
+              </div>
+              
+              <!-- Step 3: Configuration -->
+              <div id="installStep3" class="install-step" style="display: none;">
+                <h5>Step 3: Configuration Details</h5>
+                <div class="mb-3">
+                  <label for="customRelayHost" class="form-label">SMTP Server Host:</label>
+                  <input type="text" class="form-control" id="customRelayHost" placeholder="smtp.example.com">
+                  <div class="form-text" id="relayHostHint">Enter the SMTP server host for your provider</div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="customRelayPort" class="form-label">SMTP Server Port:</label>
+                    <input type="number" class="form-control" id="customRelayPort" value="587" min="1" max="65535">
+                    <div class="form-text">Common ports: 587 (STARTTLS), 465 (SSL)</div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="customUsername" class="form-label">Username/Email:</label>
+                    <input type="text" class="form-control" id="customUsername" placeholder="user@example.com">
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="customPassword" class="form-label">Password/App Password:</label>
+                  <input type="password" class="form-control" id="customPassword">
+                  <div class="form-text" id="passwordHint">For Gmail, use an App Password, not your regular password</div>
+                </div>
+                <div class="d-flex justify-content-between mt-3">
+                  <button id="prevToStep2" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Previous</button>
+                  <button id="nextToStep4" class="btn btn-primary">Next <i class="bi bi-arrow-right"></i></button>
+                </div>
+              </div>
+              
+              <!-- Step 4: Confirmation -->
+              <div id="installStep4" class="install-step" style="display: none;">
+                <h5>Step 4: Confirmation</h5>
+                <div class="alert alert-warning">
+                  <i class="bi bi-exclamation-triangle"></i> Installing SMTP relay will modify your system's Postfix configuration.
+                </div>
+                <div id="summaryContent">
+                  <p>Loading summary...</p>
+                </div>
+                <div class="d-flex justify-content-between mt-3">
+                  <button id="prevToStep3" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Previous</button>
+                  <button id="installStart" class="btn btn-success"><i class="bi bi-gear-fill"></i> Install Now</button>
+                </div>
+              </div>
+              
+              <!-- Step 5: Installation Progress -->
+              <div id="installStep5" class="install-step" style="display: none;">
+                <h5>Step 5: Installation in Progress</h5>
+                <div class="progress mb-3">
+                  <div id="installProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div id="installStatus" class="alert alert-info">
+                  <i class="bi bi-info-circle"></i> Starting installation...
+                </div>
+                <div id="installOutput" class="queue-content" style="max-height: 200px;"></div>
+                <div class="d-flex justify-content-center mt-3">
+                  <button id="closeInstallWizard" class="btn btn-primary">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Uninstall Modal -->
+    <div class="modal fade" id="uninstallModal" tabindex="-1" aria-labelledby="uninstallModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="uninstallModalLabel"><i class="bi bi-trash"></i> Uninstall SMTP Relay</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle"></i> This will remove SMTP relay configuration and restore system to original state.
+            </div>
+            <p>Are you sure you want to uninstall SMTP relay? This action cannot be undone.</p>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="confirmUninstall">
+              <label class="form-check-label" for="confirmUninstall">I understand this action cannot be undone</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button id="confirmUninstallBtn" class="btn btn-danger">Uninstall Now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_BASE_URL = window.location.origin.replace('5000', '5001') + '/api';
+        const API_BASE_URL = '/api';
         let editSenderModal;
         let addSenderModal;
 
@@ -159,6 +337,7 @@
             
             document.getElementById('add-sender-btn').addEventListener('click', openAddModal);
             document.getElementById('save-new-sender').addEventListener('click', addSender);
+            document.getElementById('sasl-form').addEventListener('submit', handleSaslForm);
             document.getElementById('test-email-form').addEventListener('submit', sendTestEmail);
             document.getElementById('flush-queue-btn').addEventListener('click', flushQueue);
             document.getElementById('save-sender-changes').addEventListener('click', saveSenderChanges);
@@ -174,10 +353,12 @@
             try {
                 const response = await fetch(API_BASE_URL + endpoint, options);
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'Network error or invalid JSON response' }));
-                    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ detail: 'Network error or invalid JSON response' }));
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
                 }
-                return await response.json();
+                // Jika tidak ada konten, kembalikan objek sukses kosong
+                const text = await response.text();
+                return text ? JSON.parse(text) : { status: 'success' };
             } catch (error) {
                 console.error('API Fetch Error:', error);
                 showMessage('API Error: ' + error.message, 'error');
@@ -186,53 +367,59 @@
         }
 
         async function loadStatus() {
-            const data = await apiFetch('/status');
-            document.getElementById('senders-count').textContent = data.senders_count;
-            document.getElementById('senders-badge').textContent = data.senders_count;
-            const postfixStatusEl = document.getElementById('status-postfix');
-            if (data.postfix_running) {
-                postfixStatusEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-            } else {
-                postfixStatusEl.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
-            }
+            try {
+                const data = await apiFetch('/status');
+                document.getElementById('senders-count').textContent = data.senders_count;
+                document.getElementById('senders-badge').textContent = data.senders_count;
+                const postfixStatusEl = document.getElementById('status-postfix');
+                if (data.postfix_running) {
+                    postfixStatusEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                } else {
+                    postfixStatusEl.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+                }
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         async function loadSenders() {
-            const senders = await apiFetch('/senders');
-            const select = document.getElementById('from_email');
-            select.innerHTML = '<option value="">Select sender</option>';
-            senders.forEach(sender => {
-                const option = document.createElement('option');
-                option.value = sender.email;
-                option.textContent = sender.name + ' <' + sender.email + '>';
-                select.appendChild(option);
-            });
+            try {
+                const senders = await apiFetch('/senders');
+                const select = document.getElementById('from_email');
+                select.innerHTML = '<option value="">Select sender</option>';
+                senders.forEach(sender => {
+                    const option = document.createElement('option');
+                    option.value = sender.email;
+                    option.textContent = sender.name + ' <' + sender.email + '>';
+                    select.appendChild(option);
+                });
 
-            const sendersList = document.getElementById('senders-list');
-            if (senders.length === 0) {
-                sendersList.innerHTML = '<div class="text-center p-4"><i class="bi bi-people fs-1 text-muted"></i><p class="text-muted mt-2">No senders configured yet</p></div>';
-                return;
-            }
-            let html = '<ul class="list-group list-group-flush">';
-            senders.forEach((sender, index) => {
-                html += '<li class="list-group-item d-flex justify-content-between align-items-center">' +
-                    '<div><strong>' + sender.name + '</strong><br><small class="text-muted">' + sender.email + '</small></div>' +
-                    '<div>' +
-                    '<button class="btn btn-sm btn-outline-primary me-2" onclick="openEditModal(' + index + ', \'' + sender.name + '\', \'' + sender.email + '\')"><i class="bi bi-pencil"></i></button>' +
-                    '<button class="btn btn-sm btn-outline-danger" onclick="deleteSender(' + index + ')"><i class="bi bi-trash"></i></button>' +
-                    '</div>' +
-                    '</li>';
-            });
-            html += '</ul>';
-            sendersList.innerHTML = html;
+                const sendersList = document.getElementById('senders-list');
+                if (senders.length === 0) {
+                    sendersList.innerHTML = '<div class="text-center p-4"><i class="bi bi-people fs-1 text-muted"></i><p class="text-muted mt-2">No senders configured yet</p></div>';
+                    return;
+                }
+                let html = '<ul class="list-group list-group-flush">';
+                senders.forEach((sender, index) => {
+                    html += '<li class="list-group-item d-flex justify-content-between align-items-center">' +
+                        '<div><strong>' + sender.name + '</strong><br><small class="text-muted">' + sender.email + '</small></div>' +
+                        '<div>' +
+                        '<button class="btn btn-sm btn-outline-primary me-2" onclick="openEditModal(' + index + ', \'' + sender.name.replace(/'/g, "\\'") + '\', \'' + sender.email + '\')"><i class="bi bi-pencil"></i></button>' +
+                        '<button class="btn btn-sm btn-outline-danger" onclick="deleteSender(' + index + ')"><i class="bi bi-trash"></i></button>' +
+                        '</div>' +
+                        '</li>';
+                });
+                html += '</ul>';
+                sendersList.innerHTML = html;
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         async function loadQueue() {
-            const data = await apiFetch('/mail_queue');
-            document.getElementById('queue-info').textContent = data.queue || data.message;
-            const lines = data.queue ? data.queue.split('\n') : [];
-            const count = lines.filter(line => line.trim() && !line.includes('Mail queue is empty') && !line.includes('-Queue ID-')).length;
-            document.getElementById('queue-count').textContent = count;
+            try {
+                const data = await apiFetch('/mail_queue');
+                document.getElementById('queue-info').textContent = data.queue || data.message;
+                const lines = data.queue ? data.queue.split('\n') : [];
+                const count = lines.filter(line => line.trim() && !line.includes('Mail queue is empty') && !line.includes('-Queue ID-')).length;
+                document.getElementById('queue-count').textContent = count;
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         function openAddModal() {
@@ -241,58 +428,64 @@
         }
 
         async function addSender() {
-            const data = {
-                name: document.getElementById('add-sender-name').value,
-                email: document.getElementById('add-sender-email').value
-            };
-            if (!data.name || !data.email) {
-                showMessage('Name and Email are required.', 'error');
-                return;
-            }
-            await apiFetch('/senders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            showMessage('Sender added successfully!', 'success');
-            addSenderModal.hide();
-            loadAllData();
+            try {
+                const data = {
+                    name: document.getElementById('add-sender-name').value,
+                    email: document.getElementById('add-sender-email').value
+                };
+                if (!data.name || !data.email) {
+                    showMessage('Name and Email are required.', 'error');
+                    return;
+                }
+                await apiFetch('/senders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                showMessage('Sender added successfully!', 'success');
+                addSenderModal.hide();
+                loadAllData();
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
         
         async function sendTestEmail(e) {
             e.preventDefault();
-            const fromSelect = document.getElementById('from_email');
-            const data = {
-                from_email: fromSelect.value,
-                from_name: fromSelect.options[fromSelect.selectedIndex].text.split('<')[0].trim(),
-                to_email: document.getElementById('to_email').value,
-                subject: document.getElementById('subject').value,
-                body: document.getElementById('body').value
-            };
-            const result = await apiFetch('/send_test_email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            showMessage(result.message, result.status);
-            if (result.status === 'success') {
+            try {
+                const fromSelect = document.getElementById('from_email');
+                const data = {
+                    from_email: fromSelect.value,
+                    from_name: fromSelect.options[fromSelect.selectedIndex].text.split('<')[0].trim(),
+                    to_email: document.getElementById('to_email').value,
+                    subject: document.getElementById('subject').value,
+                    body: document.getElementById('body').value
+                };
+                await apiFetch('/send_test_email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                showMessage('Test email sent successfully!', 'success');
                 document.getElementById('test-email-form').reset();
-                loadQueue();
-            }
+                setTimeout(loadQueue, 1500); // Beri waktu Postfix
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         async function flushQueue() {
             if (!confirm('Are you sure you want to flush the mail queue?')) return;
-            const data = await apiFetch('/flush_queue', { method: 'POST' });
-            showMessage(data.message, data.status === 'success' ? 'info' : 'error');
-            loadAllData();
+            try {
+                const data = await apiFetch('/flush_queue', { method: 'POST' });
+                showMessage(data.message || 'Flush command sent!', data.status === 'success' ? 'info' : 'error');
+                setTimeout(loadAllData, 1500);
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         async function deleteSender(index) {
             if (!confirm('Are you sure you want to delete this sender?')) return;
-            await apiFetch('/senders/' + index, { method: 'DELETE' });
-            showMessage('Sender deleted successfully!', 'success');
-            loadAllData();
+            try {
+                await apiFetch('/senders/' + index, { method: 'DELETE' });
+                showMessage('Sender deleted successfully!', 'success');
+                loadAllData();
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
 
         function openEditModal(id, name, email) {
@@ -303,19 +496,21 @@
         }
 
         async function saveSenderChanges() {
-            const id = document.getElementById('edit-sender-id').value;
-            const data = {
-                name: document.getElementById('edit-sender-name').value,
-                email: document.getElementById('edit-sender-email').value
-            };
-            await apiFetch('/senders/' + id, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            showMessage('Sender updated successfully!', 'success');
-            editSenderModal.hide();
-            loadAllData();
+            try {
+                const id = document.getElementById('edit-sender-id').value;
+                const data = {
+                    name: document.getElementById('edit-sender-name').value,
+                    email: document.getElementById('edit-sender-email').value
+                };
+                await apiFetch('/senders/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                showMessage('Sender updated successfully!', 'success');
+                editSenderModal.hide();
+                loadAllData();
+            } catch(e) { /* Error sudah ditangani di apiFetch */ }
         }
         
         function showMessage(message, type) {
@@ -337,6 +532,339 @@
                 }
             }, 5000);
         }
+
+        async function handleSaslForm(e) {
+            e.preventDefault();
+            try {
+                // PERUBAHAN: Ambil nilai dari dua input
+                const data = {
+                    relay_host: document.getElementById('relay_host').value,
+                    relay_port: parseInt(document.getElementById('relay_port').value, 10),
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value,
+                };
+                if (!data.relay_host || !data.relay_port || !data.username) {
+                    showMessage('All SASL fields are required.', 'error');
+                    return;
+                }
+
+                const result = await apiFetch('/configure_sasl', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                showMessage(result.message || 'SASL configuration saved!', 'success');
+                // Jangan reset form agar mudah diedit kembali
+            } catch (e) { /* Error sudah ditangani di apiFetch */ }
+        }
+
+        // Installation Wizard Functions
+        let installWizardModal;
+        let uninstallModal;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            addSenderModal = new bootstrap.Modal(document.getElementById('addSenderModal'));
+            editSenderModal = new bootstrap.Modal(document.getElementById('editSenderModal'));
+            installWizardModal = new bootstrap.Modal(document.getElementById('installWizardModal'));
+            uninstallModal = new bootstrap.Modal(document.getElementById('uninstallModal'));
+            
+            loadAllData();
+            loadInstallationStatus(); // Load installation status
+            
+            document.getElementById('add-sender-btn').addEventListener('click', openAddModal);
+            document.getElementById('save-new-sender').addEventListener('click', addSender);
+            document.getElementById('sasl-form').addEventListener('submit', handleSaslForm);
+            document.getElementById('test-email-form').addEventListener('submit', sendTestEmail);
+            document.getElementById('flush-queue-btn').addEventListener('click', flushQueue);
+            document.getElementById('save-sender-changes').addEventListener('click', saveSenderChanges);
+            
+            // Installation wizard button handlers
+            document.getElementById('installWizardBtn').addEventListener('click', openInstallWizard);
+            document.getElementById('uninstallBtn').addEventListener('click', openUninstallModal);
+            
+            // Install wizard navigation
+            document.getElementById('nextToStep2').addEventListener('click', goToStep2);
+            document.getElementById('prevToStep1').addEventListener('click', goToStep1);
+            document.getElementById('nextToStep3').addEventListener('click', goToStep3);
+            document.getElementById('prevToStep2').addEventListener('click', goToStep2);
+            document.getElementById('nextToStep4').addEventListener('click', goToStep4);
+            document.getElementById('prevToStep3').addEventListener('click', goToStep3);
+            document.getElementById('installStart').addEventListener('click', startInstallation);
+            document.getElementById('prevToStep4').addEventListener('click', goToStep4);
+            document.getElementById('closeInstallWizard').addEventListener('click', closeInstallWizard);
+            
+            // Uninstall modal handlers
+            document.getElementById('confirmUninstallBtn').addEventListener('click', startUninstall);
+        });
+
+        async function loadInstallationStatus() {
+            try {
+                const data = await apiFetch('/installation/status');
+                const statusDiv = document.getElementById('installationStatus');
+                
+                if (data && data.verification_results) {
+                    const verification = data.verification_results;
+                    const postfixStatus = data.system_info.postfix_status;
+                    
+                    let statusHtml = '<ul class="mb-0">';
+                    statusHtml += `<li>Postfix Running: ${verification.postfix_running ? '<span class="text-success">Yes</span>' : '<span class="text-danger">No</span>'}</li>`;
+                    statusHtml += `<li>Postfix Config Valid: ${verification.config_valid ? '<span class="text-success">Yes</span>' : '<span class="text-danger">No</span>'}</li>`;
+                    statusHtml += `<li>SASL Configured: ${verification.sasl_configured ? '<span class="text-success">Yes</span>' : '<span class="text-danger">No</span>'}</li>`;
+                    statusHtml += `<li>System Compatible: <span class="text-success">Yes</span></li>`;
+                    statusHtml += '</ul>';
+                    
+                    statusDiv.innerHTML = statusHtml;
+                } else {
+                    statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Unable to get installation status';
+                }
+            } catch(e) {
+                document.getElementById('installationStatus').innerHTML = '<i class="bi bi-x-circle text-danger"></i> Error loading installation status';
+            }
+        }
+
+        async function openInstallWizard() {
+            // Reset wizard to first step
+            document.getElementById('installStep1').style.display = 'block';
+            document.getElementById('installStep2').style.display = 'none';
+            document.getElementById('installStep3').style.display = 'none';
+            document.getElementById('installStep4').style.display = 'none';
+            document.getElementById('installStep5').style.display = 'none';
+            
+            // Load system info
+            try {
+                const systemInfo = await apiFetch('/installation/system-info');
+                const systemInfoContent = document.getElementById('systemInfoContent');
+                
+                let infoHtml = `
+                    <table class="table table-sm">
+                        <tr><td><strong>OS:</strong></td><td>${systemInfo.os_info.name} ${systemInfo.os_info.version}</td></tr>
+                        <tr><td><strong>Package Manager:</strong></td><td>${systemInfo.package_manager}</td></tr>
+                        <tr><td><strong>Sudo Access:</strong></td><td>${systemInfo.has_sudo ? 'Yes' : 'No'}</td></tr>
+                        <tr><td><strong>Network Connected:</strong></td><td>${systemInfo.network_connected ? 'Yes' : 'No'}</td></tr>
+                    </table>
+                `;
+                
+                systemInfoContent.innerHTML = infoHtml;
+            } catch(e) {
+                document.getElementById('systemInfoContent').innerHTML = '<div class="alert alert-danger">Error loading system info: ' + e.message + '</div>';
+            }
+            
+            // Load providers
+            try {
+                const providersData = await apiFetch('/installation/providers');
+                const providerSelect = document.getElementById('providerSelect');
+                
+                providerSelect.innerHTML = '<option value="">Select a provider...</option>';
+                
+                providersData.providers.forEach(provider => {
+                    const option = document.createElement('option');
+                    option.value = provider.key;
+                    option.textContent = provider.name;
+                    providerSelect.appendChild(option);
+                });
+            } catch(e) {
+                console.error('Error loading providers:', e);
+            }
+            
+            installWizardModal.show();
+        }
+
+        function goToStep2() {
+            document.getElementById('installStep1').style.display = 'none';
+            document.getElementById('installStep2').style.display = 'block';
+        }
+
+        function goToStep1() {
+            document.getElementById('installStep2').style.display = 'none';
+            document.getElementById('installStep1').style.display = 'block';
+        }
+
+        function goToStep3() {
+            const selectedProvider = document.getElementById('providerSelect').value;
+            if (!selectedProvider) {
+                showMessage('Please select an email provider', 'error');
+                return;
+            }
+            
+            // Show provider description
+            const providersData = Array.from(document.getElementById('providerSelect').options)
+                .map(option => ({key: option.value, name: option.text}))
+                .filter(provider => provider.key === selectedProvider);
+                
+            if (providersData.length > 0) {
+                const providerDescription = document.getElementById('providerDescription');
+                providerDescription.innerHTML = `<strong>${providersData[0].name}</strong>: ${getProviderDescription(selectedProvider)}`;
+                providerDescription.style.display = 'block';
+            }
+            
+            // Set default values based on provider
+            if (selectedProvider === 'gmail') {
+                document.getElementById('customRelayHost').value = 'smtp.gmail.com';
+                document.getElementById('customRelayPort').value = '587';
+                document.getElementById('passwordHint').textContent = 'For Gmail, use an App Password, not your regular password. Learn more: https://support.google.com/accounts/answer/185833';
+            } else if (selectedProvider === 'outlook') {
+                document.getElementById('customRelayHost').value = 'smtp-mail.outlook.com';
+                document.getElementById('customRelayPort').value = '587';
+            } else if (selectedProvider === 'sendgrid') {
+                document.getElementById('customRelayHost').value = 'smtp.sendgrid.net';
+                document.getElementById('customRelayPort').value = '587';
+            } else if (selectedProvider === 'aws_ses') {
+                document.getElementById('customRelayHost').value = 'email-smtp.us-east-1.amazonaws.com';
+                document.getElementById('customRelayPort').value = '587';
+                document.getElementById('relayHostHint').textContent = 'Use the endpoint for your specific AWS region';
+            } else if (selectedProvider === 'custom') {
+                document.getElementById('customRelayHost').value = '';
+                document.getElementById('customRelayPort').value = '587';
+                document.getElementById('relayHostHint').textContent = 'Enter the SMTP server host for your provider';
+                document.getElementById('passwordHint').textContent = 'Enter your SMTP password';
+            }
+            
+            document.getElementById('installStep2').style.display = 'none';
+            document.getElementById('installStep3').style.display = 'block';
+        }
+
+        function getProviderDescription(providerKey) {
+            const descriptions = {
+                'gmail': 'Gmail SMTP with OAuth2 or App Passwords',
+                'outlook': 'Outlook/Hotmail SMTP service',
+                'sendgrid': 'SendGrid SMTP service',
+                'aws_ses': 'AWS Simple Email Service SMTP',
+                'custom': 'Custom SMTP server configuration'
+            };
+            return descriptions[providerKey] || 'Custom provider';
+        }
+
+        function goToStep2From3() {
+            document.getElementById('installStep3').style.display = 'none';
+            document.getElementById('installStep2').style.display = 'block';
+        }
+
+        function goToStep4() {
+            // Validate required fields
+            const host = document.getElementById('customRelayHost').value.trim();
+            const port = document.getElementById('customRelayPort').value.trim();
+            const username = document.getElementById('customUsername').value.trim();
+            const password = document.getElementById('customPassword').value.trim();
+            
+            if (!host || !port || !username || !password) {
+                showMessage('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            // Validate port
+            const portNum = parseInt(port);
+            if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+                showMessage('Port must be a number between 1 and 65535', 'error');
+                return;
+            }
+            
+            // Show summary
+            const summaryContent = document.getElementById('summaryContent');
+            summaryContent.innerHTML = `
+                <table class="table table-sm">
+                    <tr><td><strong>SMTP Host:</strong></td><td>${host}</td></tr>
+                    <tr><td><strong>SMTP Port:</strong></td><td>${port}</td></tr>
+                    <tr><td><strong>Username:</strong></td><td>${username}</td></tr>
+                    <tr><td><strong>Password:</strong></td><td>${'*'.repeat(password.length)}</td></tr>
+                </table>
+            `;
+            
+            document.getElementById('installStep3').style.display = 'none';
+            document.getElementById('installStep4').style.display = 'block';
+        }
+
+        async function startInstallation() {
+            document.getElementById('installStep4').style.display = 'none';
+            document.getElementById('installStep5').style.display = 'block';
+            
+            const config = {
+                relay_host: document.getElementById('customRelayHost').value.trim(),
+                relay_port: parseInt(document.getElementById('customRelayPort').value.trim()),
+                username: document.getElementById('customUsername').value.trim(),
+                password: document.getElementById('customPassword').value.trim(),
+                provider: document.getElementById('providerSelect').value
+            };
+            
+            try {
+                document.getElementById('installStatus').innerHTML = '<i class="bi bi-info-circle"></i> Starting installation...';
+                
+                // Update progress bar
+                const progressBar = document.getElementById('installProgress');
+                progressBar.style.width = '20%';
+                progressBar.textContent = '20%';
+                
+                // Call the installation endpoint
+                const result = await apiFetch('/installation/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ config: config })
+                });
+                
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                
+                if (result.success) {
+                    document.getElementById('installStatus').innerHTML = '<i class="bi bi-check-circle text-success"></i> ' + (result.message || 'Installation completed successfully!');
+                    document.getElementById('installOutput').innerHTML = 'Installation finished.';
+                    
+                    // Reload the main status
+                    setTimeout(() => {
+                        loadAllData();
+                        loadInstallationStatus();
+                    }, 2000);
+                } else {
+                    document.getElementById('installStatus').innerHTML = '<i class="bi bi-x-circle text-danger"></i> ' + (result.message || 'Installation failed.');
+                    if (result.error) {
+                        document.getElementById('installOutput').innerHTML = result.error;
+                    }
+                }
+            } catch (e) {
+                document.getElementById('installStatus').innerHTML = '<i class="bi bi-x-circle text-danger"></i> Installation failed: ' + e.message;
+                document.getElementById('installOutput').innerHTML = e.message;
+            }
+        }
+
+        function closeInstallWizard() {
+            installWizardModal.hide();
+            // Reload data after installation
+            loadAllData();
+            loadInstallationStatus();
+        }
+
+        function openUninstallModal() {
+            document.getElementById('confirmUninstall').checked = false;
+            uninstallModal.show();
+        }
+
+        async function startUninstall() {
+            const confirmCheckbox = document.getElementById('confirmUninstall');
+            if (!confirmCheckbox.checked) {
+                showMessage('Please confirm the uninstallation', 'error');
+                return;
+            }
+            
+            try {
+                const result = await apiFetch('/installation/uninstall', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: true })
+                });
+                
+                if (result.success) {
+                    showMessage(result.message || 'Uninstallation completed successfully!', 'success');
+                    uninstallModal.hide();
+                    
+                    // Reload data after uninstallation
+                    loadAllData();
+                    loadInstallationStatus();
+                } else {
+                    showMessage(result.message || 'Uninstallation failed.', 'error');
+                }
+            } catch (e) {
+                showMessage('Uninstallation failed: ' + e.message, 'error');
+            }
+        }
     </script>
 </body>
 </html>
+

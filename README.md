@@ -1,152 +1,92 @@
-# SMTP Relay Setup Tool
+# SMTP Relay Auto-Installation & Management Tool
 
-A comprehensive tool for setting up and managing SMTP relays with Postfix. The tool provides both a Terminal UI (TUI) and a Web UI for managing your email relay configurations with an intuitive start menu for mode selection.
+Sebuah tool komprehensif untuk **menginstal, mengatur, dan mengelola SMTP relay dengan Postfix** secara otomatis, kini dibangun di atas arsitektur FastAPI yang modern dan berkinerja tinggi.
 
-## 🚀 Features
+Aplikasi ini menyediakan **sistem otomatisasi instalasi yang mudah digunakan untuk pemula**, dengan **dua antarmuka fleksibel**—Web UI berbasis browser dan Terminal UI (TUI) yang kaya fitur—yang keduanya berinteraksi dengan server API inti yang sama, memastikan konsistensi dan kemudahan pengelolaan.
 
-### Interface Options
-- **Start Menu**: Choose between Terminal UI or Web UI mode from a single entry point
-- **Terminal UI**: Interactive curses-based interface with menus and options
-- **Web UI**: Browser-based interface accessible at http://localhost:5000
+## 🏛️ Arsitektur Aplikasi
 
-### 🔧 Configuration & Management
-- **Automatic main.cf Configuration**: When setting up SASL, default configuration is immediately added to `/etc/postfix/main.cf`
-- **Multi-Account Support**: Manage multiple relay services (Brevo, Gmail, Mailgun) in one tool
-- **Sender Management**: Add, edit, delete, and switch between different sender accounts
-- **Password Encryption**: Passwords stored using Base64 encoding in `sender.json`
+Aplikasi ini menggunakan model client-server yang sederhana namun kuat:
 
-### 📊 Monitoring & Debugging
-- **Log Parsing**: Parse `mail.log` to display email status (delivered/deferred/bounced)
-- **Mail Queue Management**: View and flush queued emails with `postqueue -p` and `postqueue -f`
-- **Comprehensive Logging**: View last 30 lines or follow logs in real-time
+ - **Server Inti (main.py):** Sebuah aplikasi FastAPI tunggal yang bertindak
+   sebagai otak. Server ini menangani semua logika backend, seperti
+   konfigurasi Postfix otomatis, manajemen sender, dan monitoring log, yang
+   semuanya diekspos melalui REST API.
+   
+ - **Klien:**
+	 - **Web UI**: Dasbor web modern dan intuitif dengan wizard instalasi otomatis, disajikan langsung oleh server FastAPI.
+	 - **Terminal UI (cli.py & smtp_start.py):** Antarmuka berbasis teks yang lengkap (menggunakan curses) dengan wizard instalasi otomatis, sebagai klien yang mengirimkan perintah ke Server Inti melalui panggilan HTTP.
 
-### 🛠️ Administration
-- **Installation**: One-click Postfix installation with apt-get
-- **SASL Configuration**: Easy setup for SMTP authentication
-- **Test Email Functionality**: Send test emails to verify relay configuration
-- **Reset/Uninstall Options**: Complete removal or reset of configurations
+## 🚀 Fitur Utama
 
-### 🐳 Deployment
-- **Docker Support**: Containerized deployment with provided Dockerfile
-- **Docker Compose**: Simplified setup with single-command deployment
-- **Cross-Platform**: Portable across different environments
+ - **Auto-Instalasi Pintar:** Sistem instalasi otomatis yang mendeteksi OS, menginstal dependensi, mengonfigurasi Postfix, dan memulai layanan dengan satu klik.
+ - **Wizard Instalasi:** Antarmuka panduan langkah-demi-langkah untuk pengguna pemula, tersedia di Web UI dan TUI.
+ - **Antarmuka Ganda, Satu Backend:** Kelola sistem Anda melalui Web UI grafis atau CLI yang praktis, dengan semua perubahan terpusat di server API.
+ - **Server Terpadu:** Satu aplikasi FastAPI menangani permintaan API dan menyajikan antarmuka web, menyederhanakan deployment dan mengurangi kompleksitas.
+ - **Manajemen Multi-Provider:** Konfigurasi otomatis untuk Gmail, Outlook, SendGrid, AWS SES, dan SMTP kustom.
+ - **Manajemen SASL Menyeluruh:** Konfigurasikan detail otentikasi SMTP (relay host, username, password) dengan mudah baik melalui form di Web UI maupun menu di CLI.
+ - **Manajemen Sender & Monitoring:** Tambah/edit/hapus sender, kirim email uji coba, dan pantau antrean serta log email secara real-time dari kedua antarmuka.
+ - **Sistem Backup & Pemulihan:** Otomatis mencadangkan konfigurasi sebelum perubahan dan menyediakan fitur uninstall lengkap.
+ - **Pengujian & Edukasi:** Cocok untuk pembelajaran dan pengujian SMTP relay dengan tampilan yang ramah pemula.
 
-## 📋 Requirements
+## 📋 Persyaratan
 
-- Python 3.6+
-- Postfix
-- mailutils
-- sudo access for Postfix configuration
+**Persyaratan Umum:**
 
-## 🛠️ Installation and Usage
+ - Python 3.8+
+ - Sistem Linux (Ubuntu, Debian, CentOS, RHEL, Fedora, Arch, dst.)
+ - Akses `sudo` untuk konfigurasi Postfix
+ - Postfix & Mailutils (akan diinstal secara otomatis jika belum ada)
 
-### Quick Start
-```bash
-# Clone the repository
-git clone <repository-url>
-cd smtp-relay-setup
+## 🛠️ Instalasi dan Penggunaan
 
-# Install dependencies
-pip install -r requirements.txt
+Pertama, kloning repositori ini:
 
-# Run the start menu to choose your preferred interface
-python3 main_menu.py
-```
+    git clone https://github.com/efzynx/autoscript-smtp-relay.git
+    
+    cd autoscript-smtp-relay
 
-### Terminal UI Mode
-```bash
-python3 main_menu.py
-# Then select "Run in Terminal UI Mode (TUI)"
-```
+**Instalasi Dependensi:**
 
-### Web UI Mode
-```bash
-python3 main_menu.py
-# Then select "Run in Web UI Mode"
-# Visit http://localhost:5000 in your browser
-```
+    python3 -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    pip install -r requirements.txt
 
-## 🐳 Docker Deployment
+**Jalankan Menu Utama:**
+Gunakan skrip main_menu.py untuk memilih mode yang ingin Anda jalankan.
 
-### Prerequisites
-Make sure you have Docker and Docker Compose installed. If you encounter permission errors, you may need to add your user to the docker group:
-```bash
-sudo usermod -aG docker $USER
-# Log out and log back in for changes to take effect
-```
+    python3 main_menu.py
 
-### Using Docker Compose (Recommended)
-The application now uses a microservices architecture with separate containers for the API server and Web UI:
-```bash
-# Build and start the API server and Web UI
-docker compose up --build -d
+Anda akan diberi pilihan:
 
-# The Web UI will be available at http://localhost:5000
-# The API server will be available at http://localhost:5001
-# SMTP relay will be available on port 25
-```
+ - **Jalankan Server (Web UI & API):** Ini akan memulai server Uvicorn. Setelah itu, Anda bisa membuka Web UI di `http://localhost:8000` untuk menggunakan wizard instalasi otomatis.
+ - **Jalankan Mode CLI (Terminal):** Ini akan menjalankan smtp_start.py. Pastikan server sudah berjalan di terminal lain agar CLI dapat terhubung.
 
-### Using Docker directly
-```bash
-# Build the Docker image
-docker build -t smtp-relay-setup .
+**Proses Instalasi Otomatis:**
 
-# Run in Web UI mode
-docker run -it -p 5000:5000 -p 5001:5001 -p 25:25 --name smtp-relay smtp-relay-setup web
+1. Akses Web UI di `http://localhost:8000` atau gunakan TUI
+2. Gunakan tombol "Install SMTP Relay" untuk membuka wizard instalasi
+3. Ikuti langkah-langkah wizard:
+   - Verifikasi informasi sistem Anda
+   - Pilih provider email (Gmail, Outlook, SendGrid, AWS SES, atau kustom)
+   - Masukkan kredensial SMTP Anda
+   - Verifikasi konfigurasi dan mulai instalasi
+4. Sistem akan otomatis:
+   - Memeriksa kompatibilitas sistem
+   - Menginstal semua dependensi yang diperlukan
+   - Mengonfigurasi Postfix sesuai pengaturan Anda
+   - Memulai dan mengaktifkan servis yang diperlukan
+   - Memverifikasi instalasi berhasil
 
-# Run in Terminal UI mode
-docker run -it --name smtp-relay smtp-relay-setup tui
+## 🔐 Catatan Keamanan
 
-# Run API server mode
-docker run -it -p 5001:5001 --name smtp-relay-api smtp-relay-setup api
-```
+ - Pastikan akses ke Web UI di port 8000 diamankan jika Anda
+   menjalankannya di server publik.
+ - Aplikasi ini memerlukan akses sudo untuk memodifikasi file
+   konfigurasi Postfix. Jalankan dengan hati-hati.
+ - Kredensial SMTP disimpan secara lokal dan seharusnya hanya diakses oleh pengguna yang sah.
+ - Gunakan App Password (bukan password utama) untuk layanan seperti Gmail.
 
-### Architecture Overview
-The system now uses a hybrid architecture:
-- **API Server**: Handles all SMTP relay functionality and provides REST API endpoints
-- **Web UI**: Modern interface that communicates with the API server
-- **TUI**: Traditional terminal interface for direct interaction
-- **Shared Backend**: Both UIs use the same backend logic and data
+## 🤝 Berkontribusi
 
-### Troubleshooting Docker Issues
-
-#### Permission Issues
-If you encounter permission errors:
-- Add your user to the docker group: `sudo usermod -aG docker $USER`
-- Log out and log back in for changes to take effect
-- Or run with sudo: `sudo docker compose up --build -d`
-
-#### Postfix in Docker Containers
-When running Postfix in Docker containers, you may encounter issues with the service not starting properly. This is a known issue with Postfix in containerized environments. The containerized setup has been updated to handle this with:
-
-1. Proper directory permissions for Postfix
-2. Direct execution of the Postfix master process
-3. Fallback checks using `ps` instead of `pgrep` for process verification
-4. Non-fatal warnings if Postfix doesn't start properly, allowing the UI to still function
-
-If the container still has issues starting Postfix:
-1. Make sure your container is running with necessary privileges
-2. The entrypoint script handles Postfix initialization
-3. If Postfix continues to have issues, consider running the application locally:
-   ```bash
-   python3 main_menu.py
-   ```
-
-## 🔐 Security Notes
-
-- Passwords are stored with Base64 encoding in sender.json
-- For production use, consider stronger encryption methods
-- Ensure Web UI access is secured when deployed publicly
-- The tool requires sudo access for Postfix configuration - ensure proper system security
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-If you encounter any issues or have questions, please open an issue in the repository.
+Kontribusi sangat kami harapkan! Silakan buat Pull Request. Untuk perubahan besar, mohon buka issue terlebih dahulu untuk berdiskusi.
