@@ -37,9 +37,16 @@ def main(stdscr):
         elif key in [curses.KEY_ENTER, 10, 13]:
             curses.endwin()
             if current_row == 0:
-                print("--- Menjalankan Server Utama (Uvicorn) di http://localhost:8000 ---")
+                # Check if uvicorn is available
+                result = subprocess.run(["which", "uvicorn"], capture_output=True, text=True)
+                if result.returncode != 0:
+                    print("Error: uvicorn tidak ditemukan. Pastikan telah diinstal dengan 'pip install uvicorn'.")
+                    input("Tekan Enter untuk kembali ke menu...")
+                    break
+                print("--- Mencari port yang tersedia dan menjalankan Server Utama (Uvicorn) ---")
                 print("Tekan CTRL+C untuk berhenti.")
-                subprocess.run(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"])
+                # Use our new run_server.py script that automatically finds an available port
+                subprocess.run(["python3", "run_server.py"])
                 break
             elif current_row == 1:
                 print("--- Membuka Mode CLI ---")

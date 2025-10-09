@@ -1,4 +1,4 @@
-Fix email sending issue and add automatic port selection
+Fix email sending issue, add automatic port selection, and improve main menu
 
 - Fixed the send_test_email API endpoint to use sendmail directly instead of incorrectly using the -a flag with the mail command
 - The -a flag was being misused to set From header, causing attachment errors
@@ -7,3 +7,4 @@ Fix email sending issue and add automatic port selection
 - Added automatic port selection functionality (8001-8999) to avoid port conflicts
 - Created run_server.py script to automatically find and use available ports
 - Created port_selector.py utility for finding available ports
+- Updated main_menu.py to use automatic port selection and check for uvicorn availability
