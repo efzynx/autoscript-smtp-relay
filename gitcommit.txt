@@ -1,6 +1,9 @@
-Fix email sending issue by correcting mail command usage
+Fix email sending issue and add automatic port selection
 
 - Fixed the send_test_email API endpoint to use sendmail directly instead of incorrectly using the -a flag with the mail command
 - The -a flag was being misused to set From header, causing attachment errors
 - Implemented secure email sending with proper headers using temporary files
 - Updated .gitignore to properly exclude sensitive config files containing credentials
+- Added automatic port selection functionality (8001-8999) to avoid port conflicts
+- Created run_server.py script to automatically find and use available ports
+- Created port_selector.py utility for finding available ports
