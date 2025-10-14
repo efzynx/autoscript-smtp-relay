@@ -8,27 +8,290 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
         :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3f37c9;
-            --success-color: #4cc9f0;
-            --danger-color: #f72585;
-            --warning-color: #f8961e;
+            --primary-color: #5b6bf0;
+            --secondary-color: #4361ee;
+            --success-color: #00d4aa;
+            --danger-color: #ff4d7c;
+            --warning-color: #ffb74d;
+            --info-color: #4dc3ff;
+            --dark-color: #2d3748;
+            --light-color: #f8fafc;
+            --gray-color: #94a3b8;
+            --border-radius: 12px;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s ease;
         }
-        body { background-color: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
-        .dashboard-header { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 25px 0; margin-bottom: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .card { border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; transition: transform 0.3s, box-shadow 0.3s; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .card-header { background-color: white; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 18px 20px; font-weight: 600; color: var(--primary-color); }
-        .stat-card { text-align: center; padding: 20px; }
-        .stat-card .icon { font-size: 2.5rem; margin-bottom: 15px; }
-        .stat-card .number { font-size: 2rem; font-weight: 700; }
-        .queue-content { background-color: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
-        footer { text-align: center; margin-top: 40px; color: #6c757d; font-size: 0.9rem; }
-        .modal-header { border-bottom: none; }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7ff 0%, #f0f4ff 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: var(--dark-color);
+            min-height: 100vh;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" preserveAspectRatio="none"><path fill="rgba(255,255,255,0.1)" d="M0,0 L1000,0 L1000,100 L0,100 Z"></path></svg>');
+            background-size: cover;
+        }
+        
+        .dashboard-header h1 {
+            font-weight: 700;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .dashboard-header p {
+            font-weight: 400;
+            opacity: 0.9;
+            position: relative;
+        }
+        
+        .card {
+            border-radius: var(--border-radius);
+            border: none;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            transition: var(--transition);
+            background: white;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .card-header {
+            background: linear-gradient(to right, white, #f8fafc);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 18px 20px;
+            font-weight: 600;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-header i {
+            font-size: 1.2rem;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 25px 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+        }
+        
+        .stat-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(91, 107, 240, 0.1);
+            color: var(--primary-color);
+        }
+        
+        .stat-card .number {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-card div:last-child {
+            color: var(--gray-color);
+            font-weight: 500;
+        }
+        
+        .queue-content {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--gray-color);
+            font-size: 0.9rem;
+            padding: 20px 0;
+        }
+        
+        .modal-header {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        
+        .modal-content {
+            border-radius: var(--border-radius);
+            border: none;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            padding: 10px 20px;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(91, 107, 240, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(to right, var(--success-color), #00b894);
+            border: none;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(to right, var(--danger-color), #e84393);
+            border: none;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(to right, var(--warning-color), #f0932b);
+            border: none;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 12px 15px;
+            border: 1px solid #e2e8f0;
+            transition: var(--transition);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(91, 107, 240, 0.1);
+        }
+        
+        .badge {
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-weight: 600;
+        }
+        
+        .list-group-item {
+            border: none;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 15px 20px;
+            transition: var(--transition);
+        }
+        
+        .list-group-item:hover {
+            background-color: rgba(91, 107, 240, 0.05);
+        }
+        
+        .list-group-item:last-child {
+            border-bottom: none;
+        }
+        
+        .progress {
+            height: 10px;
+            border-radius: 10px;
+            background-color: #e2e8f0;
+        }
+        
+        .progress-bar {
+            border-radius: 10px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+        }
+        
+        .alert {
+            border-radius: var(--border-radius);
+            border: none;
+            padding: 15px 20px;
+        }
+        
+        .install-step {
+            padding: 20px 0;
+        }
+        
+        #message-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 400px;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 20px 0;
+            }
+            
+            .stat-card {
+                padding: 20px 10px;
+            }
+            
+            .stat-card .icon {
+                width: 60px;
+                height: 60px;
+                font-size: 2rem;
+            }
+            
+            .stat-card .number {
+                font-size: 1.8rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container py-4">
         <div class="dashboard-header text-center">
             <h1><i class="bi bi-envelope-check"></i> SMTP Relay Dashboard</h1>
             <p class="lead">Manage your email relay configurations with ease</p>
@@ -36,10 +299,34 @@
         
         <!-- Stats Row -->
         <div class="row">
-            <div class="col-md-3"><div class="card stat-card"><div class="icon text-primary"><i class="bi bi-people"></i></div><div class="number" id="senders-count">0</div><div>Senders</div></div></div>
-            <div class="col-md-3"><div class="card stat-card"><div class="icon text-success"><i class="bi bi-check-circle"></i></div><div class="number" id="status-postfix">?</div><div>Postfix Status</div></div></div>
-            <div class="col-md-3"><div class="card stat-card"><div class="icon text-warning"><i class="bi bi-envelope"></i></div><div class="number" id="queue-count">0</div><div>In Queue</div></div></div>
-            <div class="col-md-3"><div class="card stat-card"><div class="icon text-info"><i class="bi bi-gear"></i></div><div class="number">10+</div><div>Features</div></div></div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="icon text-primary"><i class="bi bi-people"></i></div>
+                    <div class="number" id="senders-count">0</div>
+                    <div>Senders</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="icon text-success"><i class="bi bi-check-circle"></i></div>
+                    <div class="number" id="status-postfix">?</div>
+                    <div>Postfix Status</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="icon text-warning"><i class="bi bi-envelope"></i></div>
+                    <div class="number" id="queue-count">0</div>
+                    <div>In Queue</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="icon text-info"><i class="bi bi-gear"></i></div>
+                    <div class="number">10+</div>
+                    <div>Features</div>
+                </div>
+            </div>
         </div>
 
         <div id="message-container"></div>
@@ -52,29 +339,31 @@
                     <div class="card-header"><i class="bi bi-send"></i> Send Test Email</div>
                     <div class="card-body">
                         <form id="test-email-form">
-                            <div class="mb-3"><label for="from_email" class="form-label">From Email</label><select class="form-select" id="from_email" required><option value="">Select sender</option></select></div>
-                            <div class="mb-3"><label for="to_email" class="form-label">To Email</label><input type="email" class="form-control" id="to_email" required></div>
-                            <div class="mb-3"><label for="subject" class="form-label">Subject</label><input type="text" class="form-control" id="subject" required></div>
-                            <div class="mb-3"><label for="body" class="form-label">Message</label><textarea class="form-control" id="body" rows="4" required></textarea></div>
-                            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send-fill"></i> Send</button>
+                            <div class="mb-3">
+                                <label for="from_email" class="form-label">From Email</label>
+                                <select class="form-select" id="from_email" required>
+                                    <option value="">Select sender</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="to_email" class="form-label">To Email</label>
+                                <input type="email" class="form-control" id="to_email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="subject" class="form-label">Subject</label>
+                                <input type="text" class="form-control" id="subject" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="body" class="form-label">Message</label>
+                                <textarea class="form-control" id="body" rows="4" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-send-fill"></i> Send Test Email
+                            </button>
                         </form>
                     </div>
                 </div>
-            </div>
-            <div class="col-lg-7">
-                <!-- Senders List -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-people"></i> Senders</span>
-                        <div>
-                            <span class="badge bg-primary rounded-pill me-2" id="senders-badge">0</span>
-                            <button class="btn btn-sm btn-primary" id="add-sender-btn">
-                                <i class="bi bi-plus-circle"></i> Add New
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0" id="senders-list-container"><div id="senders-list"></div></div>
-                </div>
+                
                 <!-- SASL card -->
                 <div class="card">
                     <div class="card-header"><i class="bi bi-shield-lock"></i> Konfigurasi SASL (SMTP Relay)</div>
@@ -98,20 +387,45 @@
                                 <label for="password" class="form-label">Password</label>
                                 <input type="password" class="form-control" id="password" required>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100">Simpan Konfigurasi SASL</button>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-lg"></i> Simpan Konfigurasi SASL
+                            </button>
                         </form>
                     </div>
                 </div>
+            </div>
+            
+            <div class="col-lg-7">
+                <!-- Senders List -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-people"></i> Senders</span>
+                        <div>
+                            <span class="badge bg-primary rounded-pill me-2" id="senders-badge">0</span>
+                            <button class="btn btn-sm btn-primary" id="add-sender-btn">
+                                <i class="bi bi-plus-circle"></i> Add New
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0" id="senders-list-container">
+                        <div id="senders-list"></div>
+                    </div>
+                </div>
+                
                 <!-- Installation Card -->
                 <div class="card">
                     <div class="card-header"><i class="bi bi-tools"></i> Installation & Management</div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <button id="installWizardBtn" class="btn btn-success w-100"><i class="bi bi-hammer"></i> Install SMTP Relay</button>
+                                <button id="installWizardBtn" class="btn btn-success w-100">
+                                    <i class="bi bi-hammer"></i> Install SMTP Relay
+                                </button>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <button id="uninstallBtn" class="btn btn-danger w-100"><i class="bi bi-trash"></i> Uninstall SMTP Relay</button>
+                                <button id="uninstallBtn" class="btn btn-danger w-100">
+                                    <i class="bi bi-trash"></i> Uninstall SMTP Relay
+                                </button>
                             </div>
                         </div>
                         <div class="mt-3">
@@ -128,13 +442,18 @@
                     <div class="card-header"><i class="bi bi-inboxes"></i> Mail Queue</div>
                     <div class="card-body">
                         <div class="queue-content" id="queue-info">Loading...</div>
-                        <div class="mt-3 text-end"><button id="flush-queue-btn" class="btn btn-warning"><i class="bi bi-bootstrap-reboot"></i> Flush Queue</button></div>
+                        <div class="mt-3 text-end">
+                            <button id="flush-queue-btn" class="btn btn-warning">
+                                <i class="bi bi-bootstrap-reboot"></i> Flush Queue
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modals (tetap sama dengan sebelumnya) -->
     <!-- Add Sender Modal -->
     <div class="modal fade" id="addSenderModal" tabindex="-1" aria-labelledby="addSenderModalLabel" aria-hidden="true">
       <div class="modal-dialog">
@@ -325,6 +644,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // JavaScript tetap sama dengan sebelumnya
         const API_BASE_URL = '/api';
         let editSenderModal;
         let addSenderModal;
@@ -867,4 +1187,3 @@
     </script>
 </body>
 </html>
-
