@@ -4,14 +4,41 @@ import os
 import json
 import requests
 
-API_BASE_URL = "http://localhost:8000/api"
+def get_api_port():
+    """Get the API port from the server port file, default to 8000 if file doesn't exist"""
+    port_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".server_port")
+    if os.path.exists(port_file):
+        try:
+            with open(port_file, 'r') as f:
+                port = f.read().strip()
+                if port.isdigit():
+                    return int(port)
+        except Exception:
+            pass
+    return 8000  # Default fallback
+
+API_PORT = get_api_port()
+API_BASE_URL = f"http://localhost:{API_PORT}/api"
 
 def check_api_status():
-    try:
-        requests.get(API_BASE_URL + "/status", timeout=2)
-        return True
-    except requests.exceptions.RequestException:
-        return False
+    """Check if the API server is responsive, with multiple attempts"""
+    import time
+    max_retries = 10  # Try up to 10 times (20 seconds with 2 second intervals)
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            response = requests.get(API_BASE_URL + "/status", timeout=2)
+            if response.status_code < 500:  # Server is responding (not internal error)
+                return True
+        except requests.exceptions.RequestException:
+            pass
+        
+        if retry_count < max_retries - 1:  # Don't sleep on the last attempt
+            time.sleep(2)  # Wait 2 seconds before retrying
+        retry_count += 1
+    
+    return False
 
 # --- Fungsi-fungsi yang memanggil API ---
 def api_get(endpoint):
@@ -26,6 +53,24 @@ def api_get(endpoint):
 def api_post(endpoint, data):
     try:
         res = requests.post(f"{API_BASE_URL}/{endpoint}", json=data)
+        res.raise_for_status()
+        return res.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error API: {e.response.text if e.response else e}")
+        return None
+
+def api_put(endpoint, data):
+    try:
+        res = requests.put(f"{API_BASE_URL}/{endpoint}", json=data)
+        res.raise_for_status()
+        return res.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error API: {e.response.text if e.response else e}")
+        return None
+
+def api_delete(endpoint):
+    try:
+        res = requests.delete(f"{API_BASE_URL}/{endpoint}")
         res.raise_for_status()
         return res.json()
     except requests.exceptions.RequestException as e:
@@ -63,10 +108,78 @@ def edit_sender_menu(stdscr):
     while True:
         draw_menu(stdscr, current_row, options, "Edit Sender Menu")
         key = stdscr.getch()
-        # ... (Navigasi menu seperti biasa)
+        
+        # Add arrow key navigation
+        if key == curses.KEY_UP and current_row > 0:
+            current_row -= 1
+        elif key == curses.KEY_DOWN and current_row < len(options) - 1:
+            current_row += 1
         # Implementasi add/edit/delete dengan memanggil api_post, api_put, api_delete
         # Contoh untuk View Senders:
-        if key in [curses.KEY_ENTER, 10, 13] and current_row == 3:
+        elif key in [curses.KEY_ENTER, 10, 13] and current_row == 0:
+            # Add sender
+            curses.endwin()
+            print("\n--- Add Sender ---")
+            name = input("Enter sender name: ")
+            email = input("Enter sender email: ")
+            payload = {"name": name, "email": email}
+            result = api_post("senders", payload)
+            if result: 
+                print(f"\n✅ Sukses: {result.get('status', 'Sender added')}")
+            input("\nTekan Enter untuk kembali...")
+        elif key in [curses.KEY_ENTER, 10, 13] and current_row == 1:
+            # Edit sender
+            curses.endwin()
+            senders = api_get("senders")
+            if not senders:
+                print("\n--- Tidak ada sender untuk diedit ---")
+                input("\nTekan Enter untuk kembali...")
+            else:
+                print("\n--- Pilih Sender untuk Diedit ---")
+                for i, s in enumerate(senders):
+                    print(f"{i+1}. {s['name']} <{s['email']}>")
+                try:
+                    idx = int(input(f"\nPilih nomor (1-{len(senders)}): ")) - 1
+                    if 0 <= idx < len(senders):
+                        name = input(f"Nama baru (sekarang: {senders[idx]['name']}): ") or senders[idx]['name']
+                        email = input(f"Email baru (sekarang: {senders[idx]['email']}): ") or senders[idx]['email']
+                        payload = {"name": name, "email": email}
+                        result = api_put(f"senders/{idx}", payload)
+                        if result:
+                            print("\n✅ Sender berhasil diupdate")
+                        else:
+                            print(f"\n❌ Gagal mengupdate sender")
+                    else:
+                        print("Nomor tidak valid.")
+                except ValueError:
+                    print("Input harus berupa angka.")
+                input("\nTekan Enter untuk kembali...")
+        elif key in [curses.KEY_ENTER, 10, 13] and current_row == 2:
+            # Delete sender
+            curses.endwin()
+            senders = api_get("senders")
+            if not senders:
+                print("\n--- Tidak ada sender untuk dihapus ---")
+                input("\nTekan Enter untuk kembali...")
+            else:
+                print("\n--- Pilih Sender untuk Dihapus ---")
+                for i, s in enumerate(senders):
+                    print(f"{i+1}. {s['name']} <{s['email']}>")
+                try:
+                    idx = int(input(f"\nPilih nomor (1-{len(senders)}): ")) - 1
+                    if 0 <= idx < len(senders):
+                        result = api_delete(f"senders/{idx}")
+                        if result:
+                            print("\n✅ Sender berhasil dihapus")
+                        else:
+                            print(f"\n❌ Gagal menghapus sender")
+                    else:
+                        print("Nomor tidak valid.")
+                except ValueError:
+                    print("Input harus berupa angka.")
+                input("\nTekan Enter untuk kembali...")
+        elif key in [curses.KEY_ENTER, 10, 13] and current_row == 3:
+            # View Senders
             curses.endwin()
             senders = api_get("senders")
             if senders is not None:
@@ -267,7 +380,7 @@ def main(stdscr):
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
     
     if not check_api_status():
-        stdscr.addstr(1, 1, "Error: Tidak dapat terhubung ke server API di localhost:8000.")
+        stdscr.addstr(1, 1, f"Error: Tidak dapat terhubung ke server API di localhost:{API_PORT}.")
         stdscr.addstr(2, 1, "Pastikan server utama (main.py) sudah berjalan.")
         stdscr.addstr(4, 1, "Tekan tombol apa saja untuk keluar.")
         stdscr.getch()
